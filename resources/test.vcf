@@ -1,0 +1,77 @@
+##fileformat=VCFv4.2
+##origin=4-ffpe-blod1_freebayes.vcf.gz,4-ffpe-blod1_vardict.vcf.gz
+##INFO=<ID=variant_callers,Number=.,Type=String,Description="List of variant callers which detected the variant">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Read Depth">
+##FORMAT=<ID=VAF,Number=1,Type=Float,Description="ALT allele observation fraction">
+##FORMAT=<ID=VD,Number=1,Type=Integer,Description="ALT allele observation count">
+##FILTER=<ID=SN1.5,Description="SN1.5">
+##FILTER=<ID=d5,Description="d5">
+##FILTER=<ID=p8,Description="p8">
+##FILTER=<ID=WARN_HOMOPOLYMER_SNV,Description="WARN_HOMOPOLYMER_SNV">
+##FILTER=<ID=q22.5,Description="q22.5">
+##FILTER=<ID=WARN_LOW_TVAF,Description="WARN_LOW_TVAF">
+##FILTER=<ID=WARN_MQ,Description="WARN_MQ">
+##FILTER=<ID=FAIL_NO_TVAR,Description="FAIL_NO_TVAR">
+##FILTER=<ID=FAIL_HOMOPOLYMER_INDEL,Description="FAIL_HOMOPOLYMER_INDEL">
+##FILTER=<ID=WARN_NOVAR,Description="WARN_NOVAR">
+##FILTER=<ID=.,Description=".">
+##FILTER=<ID=Q0,Description="Q0">
+##FILTER=<ID=FAIL_LONGDEL,Description="FAIL_LONGDEL">
+##FILTER=<ID=pSTD,Description="pSTD">
+##FILTER=<ID=FAIL_LOD,Description="FAIL_LOD">
+##FILTER=<ID=FAIL_NVAF,Description="FAIL_NVAF">
+##FILTER=<ID=Bias,Description="Bias">
+##FILTER=<ID=NM5.25,Description="NM5.25">
+##FILTER=<ID=MSI12,Description="MSI12">
+##FILTER=<ID=PASS,Description="PASS">
+##FILTER=<ID=WARN_HOMOPOLYMER_INDEL,Description="WARN_HOMOPOLYMER_INDEL">
+##FILTER=<ID=f0.01,Description="f0.01">
+##FILTER=<ID=WARN_VERYLOW_TVAF,Description="WARN_VERYLOW_TVAF">
+##FILTER=<ID=WARN_LOW_TCOV,Description="WARN_LOW_TCOV">
+##FILTER=<ID=WARN_STRANDBIAS,Description="WARN_STRANDBIAS">
+##FILTER=<ID=v3,Description="v3">
+##FILTER=<ID=WARN_PON_vardict,Description="Warning, exists in PON for vardict">
+##FILTER=<ID=FAIL_PON_vardict,Description="Failed, exists in PON for vardict">
+##INFO=<ID=PON_NUM_vardict,Number=.,Type=String,Description="Number of PON samples variants exists in, for vardict">
+##INFO=<ID=PON_VAFS_vardict,Number=.,Type=String,Description="VAFs for PON variants, for vardict">
+##FILTER=<ID=WARN_PON_freebayes,Description="Warning, exists in PON for freebayes">
+##FILTER=<ID=FAIL_PON_freebayes,Description="Failed, exists in PON for freebayes">
+##INFO=<ID=PON_NUM_freebayes,Number=.,Type=String,Description="Number of PON samples variants exists in, for freebayes">
+##INFO=<ID=PON_VAFS_freebayes,Number=.,Type=String,Description="VAFs for PON variants, for freebayes">
+##FILTER=<ID=WARN_FFPE_PON_vardict,Description="Warning, exists in PON for vardict">
+##FILTER=<ID=FAIL_FFPE_PON_vardict,Description="Failed, exists in PON for vardict">
+##INFO=<ID=PON_FFPE_NUM_vardict,Number=.,Type=String,Description="Number of PON samples variants exists in, for vardict">
+##INFO=<ID=PON_FFPE_VAFS_vardict,Number=.,Type=String,Description="VAFs for PON variants, for vardict">
+##FILTER=<ID=WARN_FFPE_PON_freebayes,Description="Warning, exists in PON for freebayes">
+##FILTER=<ID=FAIL_FFPE_PON_freebayes,Description="Failed, exists in PON for freebayes">
+##INFO=<ID=PON_FFPE_NUM_freebayes,Number=.,Type=String,Description="Number of PON samples variants exists in, for freebayes">
+##INFO=<ID=PON_FFPE_VAFS_freebayes,Number=.,Type=String,Description="VAFs for PON variants, for freebayes">
+##VEP="v103" time="2023-06-28 10:51:10" cache="/fs1/resources/ref/hg38/vep/.vep103/homo_sapiens_merged/103_GRCh38" ensembl-variation=103.06320c4 ensembl-funcgen=103.b53bef4 ensembl-io=103.353f93a ensembl=103.4c8d44a 1000genomes="phase3" COSMIC="92" ClinVar="202008" ESP="V2-SSA137" HGMD-PUBLIC="20194" assembly="GRCh38.p13" dbSNP="154" gencode="GENCODE 37" genebuild="2014-07" gnomAD="r2.1" polyphen="2.2.2" refseq="2020-09-29 12:45:25 - GCF_000001405.39_GRCh38.p13_genomic.gff" regbuild="1.0" sift="sift5.2.2"
+##INFO=<ID=CSQ,Number=.,Type=String,Description="Consequence annotations from Ensembl VEP. Format: Allele|Consequence|IMPACT|SYMBOL|Gene|Feature_type|Feature|BIOTYPE|EXON|INTRON|HGVSc|HGVSp|cDNA_position|CDS_position|Protein_position|Amino_acids|Codons|Existing_variation|DISTANCE|STRAND|FLAGS|VARIANT_CLASS|SYMBOL_SOURCE|HGNC_ID|CANONICAL|MANE_SELECT|MANE_PLUS_CLINICAL|TSL|APPRIS|CCDS|ENSP|SWISSPROT|TREMBL|UNIPARC|UNIPROT_ISOFORM|REFSEQ_MATCH|SOURCE|REFSEQ_OFFSET|GIVEN_REF|USED_REF|BAM_EDIT|GENE_PHENO|SIFT|PolyPhen|DOMAINS|miRNA|HGVS_OFFSET|AF|AFR_AF|AMR_AF|EAS_AF|EUR_AF|SAS_AF|AA_AF|EA_AF|gnomAD_AF|gnomAD_AFR_AF|gnomAD_AMR_AF|gnomAD_ASJ_AF|gnomAD_EAS_AF|gnomAD_FIN_AF|gnomAD_NFE_AF|gnomAD_OTH_AF|gnomAD_SAS_AF|MAX_AF|MAX_AF_POPS|CLIN_SIG|SOMATIC|PHENO|PUBMED|MOTIF_NAME|MOTIF_POS|HIGH_INF_POS|MOTIF_SCORE_CHANGE|TRANSCRIPTION_FACTORS|CADD_PHRED|CADD_RAW|LoFtool|gnomADg|gnomADg_AF_popmax|gnomADg_AF|gnomADg_popmax|COSMIC|COSMIC_CNT|mmhotspot|mmhotspot_OID|luhotspot|luhotspot_OID|gihotspot|gihotspot_OID|cohotspot|cohotspot_OID|dhotspot|dhotspot_OID|cnshotspot|cnshotspot_OID">
+##CADD_PHRED=PHRED-like scaled CADD score
+##CADD_RAW=Raw CADD score
+##LoFtool=LoFtool score for gene
+##INFO=<ID=IMPRECISE,Number=0,Type=Flag,Description="Imprecise structural variation">
+##INFO=<ID=gnomADg,Number=.,Type=String,Description="/fs1/resources/ref/hg38//annotation_dbs/gnomad_3.1/gnomad.genomes.v3.1.sites.mini.vcf.gz (exact)">
+##INFO=<ID=gnomADg_AF_popmax,Number=.,Type=String,Description="AF_popmax field from /fs1/resources/ref/hg38//annotation_dbs/gnomad_3.1/gnomad.genomes.v3.1.sites.mini.vcf.gz">
+##INFO=<ID=gnomADg_AF,Number=.,Type=String,Description="AF field from /fs1/resources/ref/hg38//annotation_dbs/gnomad_3.1/gnomad.genomes.v3.1.sites.mini.vcf.gz">
+##INFO=<ID=gnomADg_popmax,Number=.,Type=String,Description="popmax field from /fs1/resources/ref/hg38//annotation_dbs/gnomad_3.1/gnomad.genomes.v3.1.sites.mini.vcf.gz">
+##INFO=<ID=COSMIC,Number=.,Type=String,Description="/fs1/resources/ref/hg38//annotation_dbs/CosmicCodingMuts_v92.vcf.gz (exact)">
+##INFO=<ID=COSMIC_CNT,Number=.,Type=String,Description="CNT field from /fs1/resources/ref/hg38//annotation_dbs/CosmicCodingMuts_v92.vcf.gz">
+##INFO=<ID=mmhotspot,Number=.,Type=String,Description="/fs1/resources/ref/hg38//annotation_dbs/solid/MM.hotspots.hotspot.hg38.vcf.gz (exact)">
+##INFO=<ID=mmhotspot_OID,Number=.,Type=String,Description="OID field from /fs1/resources/ref/hg38//annotation_dbs/solid/MM.hotspots.hotspot.hg38.vcf.gz">
+##INFO=<ID=luhotspot,Number=.,Type=String,Description="/fs1/resources/ref/hg38//annotation_dbs/solid/LU.hotspots.hotspot.hg38.vcf.gz (exact)">
+##INFO=<ID=luhotspot_OID,Number=.,Type=String,Description="OID field from /fs1/resources/ref/hg38//annotation_dbs/solid/LU.hotspots.hotspot.hg38.vcf.gz">
+##INFO=<ID=gihotspot,Number=.,Type=String,Description="/fs1/resources/ref/hg38//annotation_dbs/solid/GI.hotspots.hotspot.hg38.vcf.gz (exact)">
+##INFO=<ID=gihotspot_OID,Number=.,Type=String,Description="OID field from /fs1/resources/ref/hg38//annotation_dbs/solid/GI.hotspots.hotspot.hg38.vcf.gz">
+##INFO=<ID=cohotspot,Number=.,Type=String,Description="/fs1/resources/ref/hg38//annotation_dbs/solid/CO.hotspots.hotspot.hg38.vcf.gz (exact)">
+##INFO=<ID=cohotspot_OID,Number=.,Type=String,Description="OID field from /fs1/resources/ref/hg38//annotation_dbs/solid/CO.hotspots.hotspot.hg38.vcf.gz">
+##INFO=<ID=dhotspot,Number=.,Type=String,Description="/fs1/resources/ref/hg38//annotation_dbs/solid/D.hotspots.hotspot.hg38.vcf.gz (exact)">
+##INFO=<ID=dhotspot_OID,Number=.,Type=String,Description="OID field from /fs1/resources/ref/hg38//annotation_dbs/solid/D.hotspots.hotspot.hg38.vcf.gz">
+##INFO=<ID=cnshotspot,Number=.,Type=String,Description="/fs1/resources/ref/hg38//annotation_dbs/solid/CNS.hotspots.hotspot.hg38.vcf.gz (exact)">
+##INFO=<ID=cnshotspot_OID,Number=.,Type=String,Description="OID field from /fs1/resources/ref/hg38//annotation_dbs/solid/CNS.hotspots.hotspot.hg38.vcf.gz">
+##FILTER=<ID=GERMLINE,Description="Germline variant, detected in normal sample">
+##FILTER=<ID=GERMLINE_RISK,Description="Potential germline variant, from tumor sample">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	21PL14076-02-01-220216	7024-21-220204
+1	10339752	.	TTA	T	184	WARN_LOW_TVAF;FAIL_HOMOPOLYMER_INDEL;FAIL_NVAF;WARN_PON_freebayes;FAIL_PON_vardict;WARN_FFPE_PON_freebayes;FAIL_FFPE_PON_vardict	IMPRECISE;variant_callers=vardict|freebayes;PON_NUM_freebayes=2/39;PON_VAFS_freebayes=0,0;PON_NUM_vardict=2/39;PON_VAFS_vardict=0.0643,0.0539;PON_FFPE_NUM_freebayes=2/39;PON_FFPE_VAFS_freebayes=0,0;PON_FFPE_NUM_vardict=2/39;PON_FFPE_VAFS_vardict=0.0643,0.0539;CSQ=-|intron_variant|MODIFIER|KIF1B|ENSG00000054523|Transcript|ENST00000263934|protein_coding||29/46|ENST00000263934.10:c.3285-15_3285-14del|||||||rs776615521||1||deletion|HGNC|HGNC:16636||||1||CCDS111.1|ENSP00000263934|O60333.214||UPI000013EE7E|O60333-2||Ensembl||TA|TA||1||||||||||||0.004454|0.003029|0.0002385|0.0004408|0.0001463|0.0003015|0.0005597|0.0003289|0.0001697|0.0006605|0.0001324|0.004454|AA||||||||||||0.206|rs776615521||0.00000|||||||||||||||,-|intron_variant|MODIFIER|KIF1B|ENSG00000054523|Transcript|ENST00000377081|protein_coding||30/47|ENST00000377081.5:c.3423-15_3423-14del|||||||rs776615521||1||deletion|HGNC|HGNC:16636|YES|||1|||ENSP00000366284|O60333.214||UPI000051912B|O60333-4||Ensembl||TA|TA||1||||||||||||0.004454|0.003029|0.0002385|0.0004408|0.0001463|0.0003015|0.0005597|0.0003289|0.0001697|0.0006605|0.0001324|0.004454|AA||||||||||||0.206|rs776615521||0.00000|||||||||||||||,-|intron_variant|MODIFIER|KIF1B|ENSG00000054523|Transcript|ENST00000377086|protein_coding||31/48|ENST00000377086.5:c.3423-15_3423-14del|||||||rs776615521||1||deletion|HGNC|HGNC:16636||||1|P1||ENSP00000366290|O60333.214||UPI000003424C|O60333-1||Ensembl||TA|TA||1||||||||||||0.004454|0.003029|0.0002385|0.0004408|0.0001463|0.0003015|0.0005597|0.0003289|0.0001697|0.0006605|0.0001324|0.004454|AA||||||||||||0.206|rs776615521||0.00000|||||||||||||||,-|intron_variant|MODIFIER|KIF1B|ENSG00000054523|Transcript|ENST00000620295|protein_coding||29/46|ENST00000620295.2:c.3381-15_3381-14del|||||||rs776615521||1||deletion|HGNC|HGNC:16636||||1|||ENSP00000478500||Q4R9M9.119|UPI0000539F01|||Ensembl||TA|TA||1||||||||||||0.004454|0.003029|0.0002385|0.0004408|0.0001463|0.0003015|0.0005597|0.0003289|0.0001697|0.0006605|0.0001324|0.004454|AA||||||||||||0.206|rs776615521||0.00000|||||||||||||||,-|intron_variant|MODIFIER|KIF1B|ENSG00000054523|Transcript|ENST00000622724|protein_coding||30/47|ENST00000622724.3:c.3345-15_3345-14del|||||||rs776615521||1||deletion|HGNC|HGNC:16636||||1|||ENSP00000480063||A0A087WWA3.54|UPI0004E4CADC|||Ensembl||TA|TA||1||||||||||||0.004454|0.003029|0.0002385|0.0004408|0.0001463|0.0003015|0.0005597|0.0003289|0.0001697|0.0006605|0.0001324|0.004454|AA||||||||||||0.206|rs776615521||0.00000|||||||||||||||,-|intron_variant|MODIFIER|KIF1B|ENSG00000054523|Transcript|ENST00000676179|protein_coding||31/48|ENST00000676179.1:c.3423-15_3423-14del|||||||rs776615521||1||deletion|HGNC|HGNC:16636||NM_001365951.3|||P1||ENSP00000502065|||UPI000003424C|||Ensembl||TA|TA||1||||||||||||0.004454|0.003029|0.0002385|0.0004408|0.0001463|0.0003015|0.0005597|0.0003289|0.0001697|0.0006605|0.0001324|0.004454|AA||||||||||||0.206|rs776615521||0.00000|||||||||||||||,-|intron_variant|MODIFIER|KIF1B|23095|Transcript|NM_001365951.3|protein_coding||31/48|NM_001365951.3:c.3423-15_3423-14del|||||||rs776615521||1||deletion|EntrezGene|HGNC:16636|YES||||||NP_001352880.1||||||RefSeq||TA|TA||||||||||||||0.004454|0.003029|0.0002385|0.0004408|0.0001463|0.0003015|0.0005597|0.0003289|0.0001697|0.0006605|0.0001324|0.004454|AA||||||||||||0.206|rs776615521||0.00000|||||||||||||||,-|intron_variant|MODIFIER|KIF1B|23095|Transcript|NM_001365952.1|protein_coding||31/48|NM_001365952.1:c.3423-15_3423-14del|||||||rs776615521||1||deletion|EntrezGene|HGNC:16636|||||||NP_001352881.1||||||RefSeq||TA|TA||||||||||||||0.004454|0.003029|0.0002385|0.0004408|0.0001463|0.0003015|0.0005597|0.0003289|0.0001697|0.0006605|0.0001324|0.004454|AA||||||||||||0.206|rs776615521||0.00000|||||||||||||||,-|intron_variant|MODIFIER|KIF1B|23095|Transcript|NM_015074.3|protein_coding||29/46|NM_015074.3:c.3285-15_3285-14del|||||||rs776615521||1||deletion|EntrezGene|HGNC:16636|||||||NP_055889.2||||||RefSeq||TA|TA|OK|||||||||||||0.004454|0.003029|0.0002385|0.0004408|0.0001463|0.0003015|0.0005597|0.0003289|0.0001697|0.0006605|0.0001324|0.004454|AA||||||||||||0.206|rs776615521||0.00000|||||||||||||||,-|regulatory_region_variant|MODIFIER|||RegulatoryFeature|ENSR00000347009|promoter_flanking_region||||||||||rs776615521||||deletion||||||||||||||||||||||||||||||||0.004454|0.003029|0.0002385|0.0004408|0.0001463|0.0003015|0.0005597|0.0003289|0.0001697|0.0006605|0.0001324|0.004454|AA|||||||||||||rs776615521||0.00000|||||||||||||||	GT:VAF:VD:DP	0/1:0.0207:19:913	0/1:0.0328:30:907

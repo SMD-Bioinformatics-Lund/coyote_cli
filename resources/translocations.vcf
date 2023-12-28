@@ -1,0 +1,65 @@
+##fileformat=VCFv4.1
+##source=MergeVCF
+##SVDB_version=2.2.0 cmd="/opt/conda/envs/main-env/bin/svdb --merge --vcf 22KF00084-220531-fusions_manta_bnd_filtered.vcf:manta 22KF00084-220531-fusions_genefuse.vcf:genefuse --no_intra --pass_only --bnd_distance 10 --overlap 0.7 --priority manta,genefuse"
+##ALT=<ID=DEL,Description="Deletion">
+##ALT=<ID=DUP:TANDEM,Description="Tandem Duplication">
+##ALT=<ID=INS,Description="Insertion">
+##INFO=<ID=BND_DEPTH,Number=1,Type=Integer,Description="Read depth at local translocation breakend">
+##INFO=<ID=CIEND,Number=2,Type=Integer,Description="Confidence interval around END">
+##INFO=<ID=CIGAR,Number=A,Type=String,Description="CIGAR alignment for each alternate indel allele">
+##INFO=<ID=CIPOS,Number=2,Type=Integer,Description="Confidence interval around POS">
+##INFO=<ID=END,Number=1,Type=Integer,Description="End position of the variant described in this record">
+##INFO=<ID=EVENT,Number=1,Type=String,Description="ID of event associated to breakend">
+##INFO=<ID=HOMLEN,Number=.,Type=Integer,Description="Length of base pair identical homology at event breakpoints">
+##INFO=<ID=HOMSEQ,Number=.,Type=String,Description="Sequence of base pair identical homology at event breakpoints">
+##INFO=<ID=IMPRECISE,Number=0,Type=Flag,Description="Imprecise structural variation">
+##INFO=<ID=LEFT_SVINSSEQ,Number=.,Type=String,Description="Known left side of insertion for an insertion of unknown length">
+##INFO=<ID=MATEID,Number=.,Type=String,Description="ID of mate breakend">
+##INFO=<ID=MATE_BND_DEPTH,Number=1,Type=Integer,Description="Read depth at remote translocation mate breakend">
+##INFO=<ID=RIGHT_SVINSSEQ,Number=.,Type=String,Description="Known right side of insertion for an insertion of unknown length">
+##INFO=<ID=SVINSLEN,Number=.,Type=Integer,Description="Length of insertion">
+##INFO=<ID=SVINSSEQ,Number=.,Type=String,Description="Sequence of insertion">
+##INFO=<ID=SVLEN,Number=.,Type=Integer,Description="Difference in length between REF and ALT alleles">
+##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">
+##INFO=<ID=UR,Number=1,Type=Integer,Description="Number of unique reads supporting variant">
+##reference=file:///fs1/resources/ref/hg38/fasta/GRCh38.u2af1_fix.v1.2020_04_01.nochr.fa
+##contig=<ID=1,length=248956422>
+##contig=<ID=2,length=242193529>
+##contig=<ID=3,length=198295559>
+##contig=<ID=4,length=190214555>
+##contig=<ID=5,length=181538259>
+##contig=<ID=6,length=170805979>
+##contig=<ID=7,length=159345973>
+##contig=<ID=8,length=145138636>
+##contig=<ID=9,length=138394717>
+##contig=<ID=10,length=133797422>
+##contig=<ID=11,length=135086622>
+##contig=<ID=12,length=133275309>
+##contig=<ID=13,length=114364328>
+##contig=<ID=14,length=107043718>
+##contig=<ID=15,length=101991189>
+##contig=<ID=16,length=90338345>
+##contig=<ID=17,length=83257441>
+##contig=<ID=18,length=80373285>
+##contig=<ID=19,length=58617616>
+##contig=<ID=20,length=64444167>
+##contig=<ID=21,length=46709983>
+##contig=<ID=22,length=50818468>
+##contig=<ID=X,length=156040895>
+##contig=<ID=Y,length=57227415>
+##contig=<ID=M,length=16569>
+##FILTER=<ID=MaxMQ0Frac,Description="For a small variant (<1000 base), the fraction of reads with MAPQ0 around either breakend exceeds 0.4">
+##FORMAT=<ID=PR,Number=.,Type=Integer,Description="Spanning paired-read support for the ref and alt alleles in the order listed">
+##FORMAT=<ID=SR,Number=.,Type=Integer,Description="Split reads for the ref and alt alleles in the order listed, for reads where P(allele|read)>0.999">
+##FORMAT=<ID=UR,Number=.,Type=Integer,Description="Unique reads supporting fusion">
+##cmdline=/opt/conda/envs/py2/bin/configManta.py --tumorBam 22KF00084-220531-fusions.T.50M.dedup.bam --reference /fs1/resources/ref/hg38//fasta/GRCh38.u2af1_fix.v1.2020_04_01.nochr.fa --exome --callRegions /fs1/viktor/dna_fusions/genefuse_manta.sort.bed.gz --generateEvidenceBam --runDir .
+##INFO=<ID=VARID,Number=1,Type=String,Description="The variant ID of merged samples">
+##INFO=<ID=set,Number=1,Type=String,Description="Source VCF for the merged record in SVDB">
+##svdbcmdline=/opt/conda/envs/main-env/bin/svdb --merge --vcf 22KF00084-220531-fusions_manta_bnd_filtered.vcf:manta 22KF00084-220531-fusions_genefuse.vcf:genefuse --no_intra --pass_only --bnd_distance 10 --overlap 0.7 --priority manta,genefuse
+##SnpEffVersion="4.3t (build 2017-11-24 10:18), by Pablo Cingolani"
+##SnpEffCmd="SnpEff  GRCh38.86 22KF00084-220531-fusions.merged.vcf "
+##INFO=<ID=ANN,Number=.,Type=String,Description="Functional annotations: 'Allele | Annotation | Annotation_Impact | Gene_Name | Gene_ID | Feature_Type | Feature_ID | Transcript_BioType | Rank | HGVS.c | HGVS.p | cDNA.pos / cDNA.length | CDS.pos / CDS.length | AA.pos / AA.length | Distance | ERRORS / WARNINGS / INFO' ">
+##INFO=<ID=LOF,Number=.,Type=String,Description="Predicted loss of function effects for this variant. Format: 'Gene_Name | Gene_ID | Number_of_transcripts_in_gene | Percent_of_transcripts_affected'">
+##INFO=<ID=NMD,Number=.,Type=String,Description="Predicted nonsense mediated decay effects for this variant. Format: 'Gene_Name | Gene_ID | Number_of_transcripts_in_gene | Percent_of_transcripts_affected'">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	22KF00084-220531-fusions
+6	117331289	genefuse	T	T]6:117594777]	.	PASS	SVTYPE=BND;UR=2;set=genefuse;ANN=T]6:117594777]|bidirectional_gene_fusion|HIGH|GOPC&ROS1|ENSG00000047932&ENSG00000047936|transcript|ENST00000368508.7|protein_coding|31/42|t(6%3B6)(q22.1%3Bq22.1)(c.5249-1843)|t(6%3B6)(ENST00000368508:Ala1750_Ter2348%3BENST00000368498:Glu95_Ter463)|||||,T]6:117594777]|bidirectional_gene_fusion|HIGH|GOPC&ROS1|ENSG00000047932&ENSG00000047936|transcript|ENST00000368508.7|protein_coding|31/42|t(6%3B6)(q22.1%3Bq22.1)(c.5249-1843)|t(6%3B6)(ENST00000368508:Ala1750_Ter2348%3BENST00000535237:Glu95_Ter408)|||||,T]6:117594777]|bidirectional_gene_fusion|HIGH|GOPC&ROS1|ENSG00000047932&ENSG00000047936|transcript|ENST00000368508.7|protein_coding|31/42|t(6%3B6)(q22.1%3Bq22.1)(c.5249-1843)|t(6%3B6)(ENST00000368508:Ala1750_Ter2348%3BENST00000052569:Glu95_Ter455)|||||,T]6:117594777]|bidirectional_gene_fusion|HIGH|GOPC&RP1-179P9.3|ENSG00000047932&ENSG00000282218|transcript|ENST00000467125.1|protein_coding|4/6|t(6%3B6)(q22.1%3Bq22.1)(c.548-9895)|t(6%3B6)(ENST00000467125:Val183_Phe310%3BENST00000368498:Glu95_Ter463)|||||,T]6:117594777]|bidirectional_gene_fusion|HIGH|GOPC&RP1-179P9.3|ENSG00000047932&ENSG00000282218|transcript|ENST00000467125.1|protein_coding|4/6|t(6%3B6)(q22.1%3Bq22.1)(c.548-9895)|t(6%3B6)(ENST00000467125:Val183_Phe310%3BENST00000535237:Glu95_Ter408)|||||,T]6:117594777]|bidirectional_gene_fusion|HIGH|GOPC&RP1-179P9.3|ENSG00000047932&ENSG00000282218|transcript|ENST00000467125.1|protein_coding|4/6|t(6%3B6)(q22.1%3Bq22.1)(c.548-9895)|t(6%3B6)(ENST00000467125:Val183_Phe310%3BENST00000052569:Glu95_Ter455)|||||,T]6:117594777]|bidirectional_gene_fusion|HIGH|GOPC&ROS1|ENSG00000047932&ENSG00000047936|transcript|ENST00000403284.2|protein_coding|1/2|t(6%3B6)(q22.1%3Bq22.1)(c.170-1843)|t(6%3B6)(ENST00000403284:Ala57_Ter98%3BENST00000368498:Glu95_Ter463)|||||,T]6:117594777]|bidirectional_gene_fusion|HIGH|GOPC&ROS1|ENSG00000047932&ENSG00000047936|transcript|ENST00000403284.2|protein_coding|1/2|t(6%3B6)(q22.1%3Bq22.1)(c.170-1843)|t(6%3B6)(ENST00000403284:Ala57_Ter98%3BENST00000535237:Glu95_Ter408)|||||,T]6:117594777]|bidirectional_gene_fusion|HIGH|GOPC&ROS1|ENSG00000047932&ENSG00000047936|transcript|ENST00000403284.2|protein_coding|1/2|t(6%3B6)(q22.1%3Bq22.1)(c.170-1843)|t(6%3B6)(ENST00000403284:Ala57_Ter98%3BENST00000052569:Glu95_Ter455)|||||,T]6:117594777]|bidirectional_gene_fusion|HIGH|GOPC&ROS1|ENSG00000047932&ENSG00000047936|transcript|ENST00000368507.7|protein_coding|32/43|t(6%3B6)(q22.1%3Bq22.1)(c.5231-1843)|t(6%3B6)(ENST00000368507:Ala1744_Ter2342%3BENST00000368498:Glu95_Ter463)|||||,T]6:117594777]|bidirectional_gene_fusion|HIGH|GOPC&ROS1|ENSG00000047932&ENSG00000047936|transcript|ENST00000368507.7|protein_coding|32/43|t(6%3B6)(q22.1%3Bq22.1)(c.5231-1843)|t(6%3B6)(ENST00000368507:Ala1744_Ter2342%3BENST00000535237:Glu95_Ter408)|||||,T]6:117594777]|bidirectional_gene_fusion|HIGH|GOPC&ROS1|ENSG00000047932&ENSG00000047936|transcript|ENST00000368507.7|protein_coding|32/43|t(6%3B6)(q22.1%3Bq22.1)(c.5231-1843)|t(6%3B6)(ENST00000368507:Ala1744_Ter2342%3BENST00000052569:Glu95_Ter455)|||||	UR	2
