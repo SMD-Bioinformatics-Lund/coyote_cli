@@ -11,6 +11,7 @@ import yaml
 import csv
 import gzip
 from cli import cli_parser
+from bson.objectid import ObjectId
 
 ## Import Coyote Sample 
 #  Adds sample to coyote database. Should be able to load the following data types
@@ -26,10 +27,13 @@ from cli import cli_parser
 
 def main(args) -> None:
     command = args.command_selection
-    print(command)
+    logging.debug(f"Hi! \nLoading sample via {command} argument")
     if command == "load":
         args_dict = vars(args)
+        # remove None values from dict, otherwise it gets loaded into sample collection
         args_dict = {key: value for key, value in args_dict.items() if value is not None}
+        # make groups a list. Load sample into more than one page in coyote. Coyote expects a list
+        # although it is hardly ever used, and might cause error downstream with 2 or more groups
         tmp_list = []
         tmp_list.append(args_dict["groups"])
         args_dict["groups"] = tmp_list
@@ -42,23 +46,46 @@ def main(args) -> None:
         if key in ["load","command_selection","debug_logger","quiet","increment"]:
             continue
         sample_dict[key] = args_dict[key]
+    logging.debug(f"Sample meta information {sample_dict}")
+    if "vcf" in args_dict and "fusions" in args_dict:
+        exit("Cannot and will not load both DNA and RNA data to the same sample")
     # client = pymongo.MongoClient(config.mongo["uri"])
     # db = client[config.mongo["dbname"]]
     # samples_col = db["samples"]
-    sample_id = samples_col.insert_one(sample_dict)
-    # get SNVs to load
-    filtered_snvs = load_snvs(args_dict["vcf"],sample_id,args_dict["groups"])
-    # load optional data
-    if "cnv" in args_dict:
-        cnv_variants = load_cnv_json(args_dict["cnv"],sample_id)
-    # if "fusions" in args_dict:
-    #     load_cnv_json()
-    if "biomarkers" in args_dict:
-        biomarkers = load_biomarkers(args_dict["biomarkers"],sample_id)
-    if "transloc" in args_dict:
-        load_transloc(args_dict["transloc"],sample_id)
-    if "lowcov" in args_dict:
-        load_lowcov(args_dict["lowcov"],sample_id,args_dict["name"])
+    # sample_id = samples_col.insert_one(sample_dict)
+    # print(sample_id.inserted_id)
+    # Load DNA variation
+    if "vcf" in args_dict:
+        logging.debug(f"Loading DNA variation, starting with SNV variants..")
+        filtered_snvs = load_snvs(args_dict["vcf"],sample_id,args_dict["groups"])
+        # load optional data
+        if "cnv" in args_dict:
+            logging.debug(f"Reading copy number variation")
+            cnv_variants = load_cnv_json(args_dict["cnv"],sample_id)
+        if "biomarkers" in args_dict:
+            logging.debug(f"Reading other biomarkers")
+            biomarkers = load_biomarkers(args_dict["biomarkers"],sample_id)
+        if "transloc" in args_dict:
+            logging.debug(f"Reading DNA translocations")
+            load_transloc(args_dict["transloc"],sample_id)
+        if "lowcov" in args_dict:
+            logging.debug(f"Reading regions with lower than expected coverage")
+            load_lowcov(args_dict["lowcov"],sample_id,args_dict["name"])
+    # Load RNA variation
+    elif "fusions" in args_dict:
+        logging.debug(f"Loading RNA variation, starting with fusions..")
+        load_fusions(args_dict["fusions"],sample_id)
+        if "expression" in args_dict:
+            logging.debug(f"Reading gene expression levels")
+            with open(args_dict['expression'],'r') as file:
+                exp = json.load(file)
+                logging.debug(f"Inserted gene expression levels")
+                #samples_col.update_one( {"_id": ObjectId(str(sample_id.inserted_id)) }, {'$set': {'expr': exp}})
+        if "classification" in args_dict:
+            logging.debug(f"Reading classifications based upon expression levels")
+            with open(args_dict['classification'],'r') as file:
+                class_data = json.load(file)
+                #samples_col.update_one( {"_id": ObjectId(str(sample_id.inserted_id)) }, {'$set': {'classification': class_data}})
 
 def load_snvs(infile,sample_id,group):
     """
@@ -107,7 +134,7 @@ def load_snvs(infile,sample_id,group):
         count = 0
         for sample in var_dict["GT"]:
             if "AF" not in sample and "VAF" not in sample or "DP" not in sample or "VD" not in sample or "GT" not in sample:
-                print("not a valid VCF, should be aggregated by AF(VAF), VD AD and GT")
+                exit("not a valid VCF, should be aggregated by AF(VAF), VD AD and GT")
             # first sample is tumor, add this information to db
             if not count:
                 var_dict["GT"][count]["type"] = "case"
@@ -139,6 +166,7 @@ def load_cnv_json(cnv_json,sample_id):
     for var in cnv_dict:
         cnv_dict[var]["SAMPLE_ID"] = sample_id
         cnv_variants.append(cnv_dict[var])
+    logging.debug(f"Inserted {len(cnv_variants)} copy number variants")
     return cnv_variants
 
 def load_biomarkers(biomarkers_json,sample_id):
@@ -148,6 +176,7 @@ def load_biomarkers(biomarkers_json,sample_id):
     with open(biomarkers_json,'r') as file:
         biomarkers_dict = json.load(file) 
     biomarkers_dict["SAMPLE_ID"] = sample_id
+    logging.debug(f"Inserted {len(biomarkers_dict)-2} other biomarkers")
     return biomarkers_dict
 
 def load_lowcov(lowcov_bed,sample_id,case_id):
@@ -164,6 +193,7 @@ def load_lowcov(lowcov_bed,sample_id,case_id):
             row["end"] = int(row["end"])
             row["avg_cov"] = float(row["avg_cov"])
             lowcov_data.append(row)
+    logging.debug(f"Inserted {len(lowcov_data)} regions with lower than expected coverage")
     return lowcov_data
 
 def load_transloc(infile,sample_id):
@@ -213,6 +243,7 @@ def load_transloc(infile,sample_id):
             var_dict["INFO"]["MANE_ANN"] = mane_select
         if keep_variant:
             filtered_data.append(var_dict)
+    logging.debug(f"Inserted {len(filtered_data)} DNA fusion variants")
     return filtered_data
 
 def read_mane(txt_gz):
@@ -231,6 +262,20 @@ def read_mane(txt_gz):
             ensembl_gene = line["Ensembl_Gene"].split(".")[0]
             mane_dict[ensembl_gene] = tmp
     return mane_dict
+
+def load_fusions(infile,sample_id):
+    """
+    read fusions JSON from rnaseq-fus pipeline
+    add SAMPLE_ID to collections
+    """
+    fusions_list = []
+    with open(infile,'r') as file:
+        fusions_dict = json.load(file) 
+    for fusion in fusions_dict:
+        fusion["SAMPLE_ID"] = sample_id
+        fusions_list.append(fusion)
+    logging.debug(f"Inserted {len(fusions_list)} RNA fusion variants")
+    return fusions_list
 
 
 def setup_logging(debug : bool = False) -> None:
