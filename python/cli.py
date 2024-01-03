@@ -170,12 +170,12 @@ def cli_parser():
     )
     rna_data.add_argument(
         "--expression",
-        dest="expression",
+        dest="expression_path",
         help="Path to JSON containing gene normalized gene expression levels",
     )
     rna_data.add_argument(
         "--classification",
-        dest="classification",
+        dest="classification_path",
         help="Path to JSON containing gene expression classifications",
     )
 #GetOptions( \%opt, 'vcf=s', 'id=s', 'clarity-sample-id=s', 'clarity-pool-id=s', 'bam=s', 'group=s', 'cnv=s', 'transloc=s', 'qc=s', 'cnvprofile=s', 'build=s', 'gens=s', 'biomarkers=s', 'subpanel=s', 'purity=s', 'lowcov=s' );
