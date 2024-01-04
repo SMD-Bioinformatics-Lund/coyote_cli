@@ -94,13 +94,19 @@ def main(args) -> None:
             logging.debug(f"Reading gene expression levels")
             with open(args_dict['expression_path'],'r') as file:
                 exp = json.load(file)
+                if update:
+                    result = samples_col.update_one( {"_id": ObjectId(str(sample_id)) }, {'$unset': {'expr':""}})
+                    logging.debug(f"Removed {result.modified_count} expression levels for sample")
                 logging.debug(f"Inserted gene expression levels")
-                #samples_col.update_one( {"_id": ObjectId(str(sample_id.inserted_id)) }, {'$set': {'expr': exp}})
+                samples_col.update_one( {"_id": ObjectId(str(sample_id)) }, {'$set': {'expr': exp}})
         if "classification_path" in args_dict:
-            logging.debug(f"Reading classifications based upon expression levels")
             with open(args_dict['classification_path'],'r') as file:
                 class_data = json.load(file)
-                #samples_col.update_one( {"_id": ObjectId(str(sample_id.inserted_id)) }, {'$set': {'classification': class_data}})
+                if update:
+                    result = samples_col.update_one( {"_id": ObjectId(str(sample_id)) }, {'$unset': {'classification':""}})
+                    logging.debug(f"Removed {result.modified_count} classifications for sample")
+                samples_col.update_one( {"_id": ObjectId(str(sample_id)) }, {'$set': {'classification': class_data}})
+                logging.debug(f"Reading classifications based upon expression levels")
 
 def load_snvs(infile,sample_id,group,update,db):
     """
