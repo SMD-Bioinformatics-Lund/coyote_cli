@@ -43,6 +43,8 @@ def main(args) -> None:
         args_dict = validate_yaml(args.yaml_file)
     # do a load, get the ID-hash from sample load. Add this as SAMPLE_ID to all other documents per case
     sample_dict = {}
+    # check what's being loaded, DNA or RNA
+    data_type = data_typer(args_dict)
     for key in args_dict:
         if key in ["load","command_selection","debug_logger","quiet","increment","update"]:
             continue
@@ -56,7 +58,7 @@ def main(args) -> None:
     # update case, get sample_id for sample-collection #
     if args_dict["update"]:
         update = True
-        args_dict,sample_id = update_case(args_dict,samples_col)
+        args_dict,sample_id = update_case(args_dict,samples_col,data_type)
     # NEW CASE check db for case_id, dont cause id crashes #
     else:
         sample_dict["name"] = what_id(args_dict["name"],args_dict["increment"],samples_col)
@@ -67,26 +69,26 @@ def main(args) -> None:
         # since this is a mandatory value for non-update cases. Need to be handled differently
         if args_dict["vcf_files"] != "no_update":
             logging.debug(f"Loading DNA variation, starting with SNV variants..")
-            filtered_snvs = load_snvs(args_dict["vcf_files"],sample_id,args_dict["groups"],update)
+            load_snvs(args_dict["vcf_files"],sample_id,args_dict["groups"],update,db)
         # load optional data
         if "cnv" in args_dict:
             logging.debug(f"Reading copy number variation")
-            cnv_variants = load_cnv_json(args_dict["cnv"],sample_id,update)
+            load_cnv_json(args_dict["cnv"],sample_id,update,db)
         if "biomarkers" in args_dict:
             logging.debug(f"Reading other biomarkers")
-            biomarkers = load_biomarkers(args_dict["biomarkers"],sample_id,update)
+            load_biomarkers(args_dict["biomarkers"],sample_id,update,db)
         if "transloc" in args_dict:
             logging.debug(f"Reading DNA translocations")
-            load_transloc(args_dict["transloc"],sample_id,update)
+            load_transloc(args_dict["transloc"],sample_id,update,db)
         if "lowcov" in args_dict:
             logging.debug(f"Reading regions with lower than expected coverage")
-            load_lowcov(args_dict["lowcov"],sample_id,args_dict["name"],update)
+            load_lowcov(args_dict["lowcov"],sample_id,args_dict["name"],update,db)
     # Load RNA variation
     elif "fusion_files" in args_dict:
         # since this is a mandatory value for non-update cases. Need to be handled differently
         if args_dict["fusion_files"] != "no_update":
             logging.debug(f"Loading RNA variation, starting with fusions..")
-            load_fusions(args_dict["fusion_files"],sample_id,update)
+            load_fusions(args_dict["fusion_files"],sample_id,update,db)
         # load optional data
         if "expression_path" in args_dict:
             logging.debug(f"Reading gene expression levels")
@@ -100,7 +102,7 @@ def main(args) -> None:
                 class_data = json.load(file)
                 #samples_col.update_one( {"_id": ObjectId(str(sample_id.inserted_id)) }, {'$set': {'classification': class_data}})
 
-def load_snvs(infile,sample_id,group,update):
+def load_snvs(infile,sample_id,group,update,db):
     """
     A function to load variants into variants_idref. Only load usable information from CSQ!
     Path to VCF, will load cmdvcf module using pysam. In config per group(assay) define filters
@@ -157,8 +159,6 @@ def load_snvs(infile,sample_id,group,update):
         filtered_data.append(var_dict)
     if update:
         delete_collection("variants_idref",sample_id)
-    client = pymongo.MongoClient(config.mongo["uri"])
-    db = client[config.mongo["dbname"]]
     collection = db["variants_idref"]
     result = collection.insert_many(filtered_data)
     logging.debug(f"{len(result.inserted_ids)} SNV/Indel variant imported")
@@ -169,13 +169,12 @@ def validate_yaml(yaml_file):
     """
     with open(yaml_file, 'r') as file:
         yaml_dict = yaml.safe_load(file)
-    ## need to adapt this to fusions as well. so vcf or fusions
-    if "vcf_files" not in yaml_dict or "groups" not in yaml_dict or "name" not in yaml_dict or "build" not in yaml_dict:
+    if ("vcf_files" not in yaml_dict or "fusion_files" not in yaml_dict) or "groups" not in yaml_dict or "name" not in yaml_dict or "build" not in yaml_dict:
         exit("YAML is missing mandatory fields: vcf, groups, name or build")
 
     return yaml_dict
 
-def load_cnv_json(cnv_json,sample_id,update):
+def load_cnv_json(cnv_json,sample_id,update,db):
     """
     read all variant in cnv json, add case_id to each variant
     save as list to import many to mongodb
@@ -184,10 +183,14 @@ def load_cnv_json(cnv_json,sample_id,update):
     with open(cnv_json,'r') as file:
         cnv_dict = json.load(file)
     for var in cnv_dict:
-        cnv_dict[var]["SAMPLE_ID"] = sample_id
+        cnv_dict[var]["SAMPLE_ID"] = str(sample_id)
         cnv_variants.append(cnv_dict[var])
+    
+    if update:
+        delete_collection("cnvs_wgs",sample_id)
+    collection = db["cnvs_wgs"]
+    result = collection.insert_many(cnv_variants)
     logging.debug(f"Inserted {len(cnv_variants)} copy number variants")
-    return cnv_variants
 
 def load_biomarkers(biomarkers_json,sample_id,update):
     """
@@ -195,11 +198,11 @@ def load_biomarkers(biomarkers_json,sample_id,update):
     """
     with open(biomarkers_json,'r') as file:
         biomarkers_dict = json.load(file) 
-    biomarkers_dict["SAMPLE_ID"] = sample_id
+    biomarkers_dict["SAMPLE_ID"] = str(sample_id)
     logging.debug(f"Inserted {len(biomarkers_dict)-2} other biomarkers")
     return biomarkers_dict
 
-def load_lowcov(lowcov_bed,sample_id,case_id,update):
+def load_lowcov(lowcov_bed,sample_id,case_id,update,db):
     """
     read lowcov bedfile and load to db with case_id as SAMPLE_ID
     """
@@ -207,16 +210,19 @@ def load_lowcov(lowcov_bed,sample_id,case_id,update):
     with open(lowcov_bed, 'r') as f:
         lowcov_dict = csv.DictReader(f,delimiter="\t",fieldnames=['chr', 'start', 'end', 'avg_cov', 'amplicon'])
         for row in lowcov_dict:
-            row["SAMPLE_ID"] = sample_id
+            row["SAMPLE_ID"] = str(sample_id)
             row["sample"] = case_id
             row["start"] = int(row["start"])
             row["end"] = int(row["end"])
             row["avg_cov"] = float(row["avg_cov"])
             lowcov_data.append(row)
+    if update:
+        delete_collection("coverage",sample_id)
+    collection = db["coverage"]
+    result = collection.insert_many(lowcov_data)
     logging.debug(f"Inserted {len(lowcov_data)} regions with lower than expected coverage")
-    return lowcov_data
 
-def load_transloc(infile,sample_id,update):
+def load_transloc(infile,sample_id,update,db):
     """
     read VCF containing DNA fusions from manta-like BNDs
     Need to be annotated by SNPeff
@@ -229,7 +235,7 @@ def load_transloc(infile,sample_id,update):
         var_dict = cmdvcf.parse_variant(var,vcf_object.header)
         # ignore dups and dels (must be a better way legacy from bjhall)
         if "<" not in var_dict["ALT"]:
-            var_dict["SAMPLE_ID"] = sample_id
+            var_dict["SAMPLE_ID"] = str(sample_id)
             keep_variant = 0
             mane_select = {}
             all_new_ann = []
@@ -263,8 +269,11 @@ def load_transloc(infile,sample_id,update):
             var_dict["INFO"]["MANE_ANN"] = mane_select
         if keep_variant:
             filtered_data.append(var_dict)
+    if update:
+        delete_collection("transloc",sample_id)
+    collection = db["transloc"]
+    result = collection.insert_many(filtered_data)
     logging.debug(f"Inserted {len(filtered_data)} DNA fusion variants")
-    return filtered_data
 
 def read_mane(txt_gz):
     """
@@ -283,7 +292,7 @@ def read_mane(txt_gz):
             mane_dict[ensembl_gene] = tmp
     return mane_dict
 
-def load_fusions(infile,sample_id,update):
+def load_fusions(infile,sample_id,update,db):
     """
     read fusions JSON from rnaseq-fus pipeline
     add SAMPLE_ID to collections
@@ -292,10 +301,13 @@ def load_fusions(infile,sample_id,update):
     with open(infile,'r') as file:
         fusions_dict = json.load(file) 
     for fusion in fusions_dict:
-        fusion["SAMPLE_ID"] = sample_id
+        fusion["SAMPLE_ID"] = str(sample_id)
         fusions_list.append(fusion)
+    if update:
+        delete_collection("fusions",sample_id)
+    collection = db["fusions"]
+    result = collection.insert_many(fusions_list)
     logging.debug(f"Inserted {len(fusions_list)} RNA fusion variants")
-    return fusions_list
 
 def what_id(case_id,increment,samples_col):
     """
@@ -353,9 +365,13 @@ def catch_left_right(case_id,name):
         right_match = matches.group(3)
     return left_match,right_match,true_match
 
-def update_case(args_dict,samples_col):
+def update_case(args_dict,samples_col,data_type):
     """
     verify case exists, get objectID from sample-col
+    verify that no DNA data is added to RNA sample and vice verse
+    since fusion_files and vcf_files are mandatory for RNA respectively DNA
+    these two are given no_update if they are not part of the update, but since
+    they are mandatory they need a value
     """
     sample_id = ""
     try:
@@ -364,19 +380,23 @@ def update_case(args_dict,samples_col):
         exit("Cannot find case in database, will not update anything. Bye!")
     if samples_found_exact:
         sample_id = samples_found_exact["_id"]
-        # if these are being updated dont overwrite paths
-        if "vcf_files" in args_dict or "fusion_files" in args_dict:
-            pass
-        # if they are not present, add True value to make them pass main-functions
-        else:
-            # find if it is RNA or DNA case
-            if "fusion_files" in samples_found_exact:
-                args_dict["fusion_files"] = "no_update"
-            elif "vcf_files" in samples_found_exact:
-                args_dict["vcf_files"] = "no_update"
+        # find if it is RNA or DNA case
+        if "fusion_files" in samples_found_exact:
+            if data_type == "DNA":
+                exit("you are trying to add DNA data to a RNA sample. BAD PERSON!")
+            if "fusion_files" in args_dict:
+                pass
             else:
-                exit("update function could not determine if the case is DNA or RNA")
-        
+                args_dict["fusion_files"] = "no_update"
+        elif "vcf_files" in samples_found_exact:
+            if data_type == "RNA":
+                exit("you are trying to add RNA data to a DNA sample. BAD PERSON!")
+            elif "vcf_files" in args_dict:
+                pass
+            else:
+                args_dict["vcf_files"] = "no_update"
+        else:
+            exit("update function could not determine if the case is DNA or RNA")       
     return(args_dict,sample_id)
 
 def delete_collection(collection_name,sample_id):
@@ -387,7 +407,7 @@ def delete_collection(collection_name,sample_id):
     """
     client = pymongo.MongoClient(config.mongo["uri"])
     db = client[config.mongo["dbname"]]
-    collection = db["variants_idref"]
+    collection = db[collection_name]
     sample_col = db["samples"]
     sample = dict(sample_col.find_one( {"_id": ObjectId(str(sample_id))} ))
     results = list(collection.find({ "SAMPLE_ID": str(sample_id) }))
@@ -396,6 +416,21 @@ def delete_collection(collection_name,sample_id):
         logging.debug(f"{results.deleted_count} entries deleted from {collection_name} for {sample['name']}({sample_id})")
     else:
         logging.debug(f"No entries found for {collection_name} for {sample['name']}({sample_id})")
+
+def data_typer(args_dict):
+    """
+    verify that one data type is being added to sample
+    return type if successfull otherwise exit
+    """
+    data_type = None
+    for dtype in args_dict:
+        if dtype in config.data_types:
+            if data_type is None:
+                data_type = config.data_types[dtype]
+            else:
+                if config.data_types[dtype] != data_type:
+                    exit("data types are both from RNA and DNA. Check your input")
+    return data_type
 
 def setup_logging(debug : bool = False) -> None:
 
