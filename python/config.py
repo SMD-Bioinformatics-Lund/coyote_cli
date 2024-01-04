@@ -92,3 +92,15 @@ mongo = {
     "uri": "mtlucmds1.lund.skane.se",
     "dbname": "coyote_dev",
 }
+
+data_types = {
+    'expression_path' : "RNA",
+    'classification_path' : "RNA",
+    'fusion_files' : "RNA",
+    'biomarkers' : "DNA",
+    'vcf_files' : "DNA",
+    'lowcov' : "DNA",
+    'tranloc' : "DNA",
+    'cnvprofile' : "DNA",
+    'cnv' : "DNA",
+}
