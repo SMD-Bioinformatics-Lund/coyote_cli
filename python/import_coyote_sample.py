@@ -139,7 +139,7 @@ def load_snvs(infile,sample_id,group,update,db):
                     if float(max_af) > config_filters[key]:
                         fail_filter = 1
             elif key in filters:
-                fail_filter = 0
+                fail_filter = 1
                 break
         if fail_filter:
             break
