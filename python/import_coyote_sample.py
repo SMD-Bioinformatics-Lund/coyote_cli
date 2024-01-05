@@ -40,7 +40,6 @@ def main(args) -> None:
         args_dict["groups"] = tmp_list
     elif command == "yaml":
         args_dict = validate_yaml(args.yaml_file)
-    # do a load, get the ID-hash from sample load. Add this as SAMPLE_ID to all other documents per case
     sample_dict = {}
     # check what's being loaded, DNA or RNA
     data_type = data_typer(args_dict)
@@ -49,6 +48,7 @@ def main(args) -> None:
             continue
         sample_dict[key] = args_dict[key]
     logging.debug(f"Sample meta information {sample_dict}")
+    # do a load, get the ID-hash from sample load. Add this as SAMPLE_ID to all other documents per case
     client = pymongo.MongoClient(config.mongo["uri"])
     db = client[config.mongo["dbname"]]
     samples_col = db["samples"]
@@ -454,12 +454,13 @@ def meta_info_updater(meta_dict,sample_id,samples_col):
     for arg in meta_dict:
         if arg in result:
             if meta_dict[arg] != result[arg]:
+                if arg == "group":
+                    exit("No support to update group as of yet")
                 samples_col.update_one( { "_id": ObjectId(str(sample_id)) }, { '$set': {str(arg): meta_dict[arg] }})
                 logging.debug(f"changing {arg} : from {result[arg]} to {meta_dict[arg]}")
         else:
             samples_col.update_one( { "_id": ObjectId(str(sample_id)) }, { '$set': {str(arg): meta_dict[arg] }})
             logging.debug(f"adding {arg} : {meta_dict[arg]} to sample")
-
 
 def setup_logging(debug : bool = False) -> None:
 
@@ -468,7 +469,6 @@ def setup_logging(debug : bool = False) -> None:
         logging.basicConfig(level = logging.DEBUG, format = format)
     else:
         logging.basicConfig(level = logging.INFO, format = format)
-
 
 if __name__ == '__main__':
 

@@ -100,7 +100,7 @@ data_types = {
     'biomarkers' : "DNA",
     'vcf_files' : "DNA",
     'lowcov' : "DNA",
-    'tranloc' : "DNA",
+    'transloc' : "DNA",
     'cnvprofile' : "DNA",
     'cnv' : "DNA",
 }
