@@ -198,15 +198,18 @@ def load_cnv_json(cnv_json,sample_id,update,db):
     result = collection.insert_many(cnv_variants)
     logging.debug(f"Inserted {len(cnv_variants)} copy number variants")
 
-def load_biomarkers(biomarkers_json,sample_id,update):
+def load_biomarkers(biomarkers_json,sample_id,update,db):
     """
     read biomarkers json, add SAMPLE_ID via case_id
     """
     with open(biomarkers_json,'r') as file:
         biomarkers_dict = json.load(file) 
     biomarkers_dict["SAMPLE_ID"] = str(sample_id)
+    if update:
+        delete_collection("biomarkers",sample_id)
+    collection = db["biomarkers"]
+    result = collection.insert_many(biomarkers_dict)
     logging.debug(f"Inserted {len(biomarkers_dict)-2} other biomarkers")
-    return biomarkers_dict
 
 def load_lowcov(lowcov_bed,sample_id,case_id,update,db):
     """
