@@ -123,6 +123,7 @@ def cli_parser():
     sample_meta.add_argument(
         "--purity",
         dest="purity",
+        type=float,
         help="Tumour purity of sample",
     )
     sample_meta.add_argument(

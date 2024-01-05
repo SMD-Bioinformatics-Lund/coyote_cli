@@ -29,7 +29,6 @@ from bson.objectid import ObjectId
 def main(args) -> None:
     update = False
     command = args.command_selection
-    logging.debug(f"Hi! \nLoading sample via {command} argument")
     if command == "load":
         args_dict = vars(args)
         # remove None values from dict, otherwise it gets loaded into sample collection
@@ -50,17 +49,18 @@ def main(args) -> None:
             continue
         sample_dict[key] = args_dict[key]
     logging.debug(f"Sample meta information {sample_dict}")
-    if "vcf_files" in args_dict and "fusion_files" in args_dict:
-        exit("Cannot and will not load both DNA and RNA data to the same sample")
     client = pymongo.MongoClient(config.mongo["uri"])
     db = client[config.mongo["dbname"]]
     samples_col = db["samples"]
     # update case, get sample_id for sample-collection #
     if args_dict["update"]:
+        logging.debug(f"Hi! Updating sample via {command} argument")
         update = True
         args_dict,sample_id = update_case(args_dict,samples_col,data_type)
+        meta_info_updater(sample_dict,sample_id,samples_col)
     # NEW CASE check db for case_id, dont cause id crashes #
     else:
+        logging.debug(f"Hi! \nLoading sample via {command} argument")
         sample_dict["name"] = what_id(args_dict["name"],args_dict["increment"],samples_col)
         sample_id = samples_col.insert_one(sample_dict)
         sample_id = sample_id.inserted_id
@@ -381,10 +381,11 @@ def update_case(args_dict,samples_col,data_type):
     since fusion_files and vcf_files are mandatory for RNA respectively DNA
     these two are given no_update if they are not part of the update, but since
     they are mandatory they need a value
+    could also add only meta-data, some of this is data agnostic, some are not
     """
     sample_id = ""
     try:
-        samples_found_exact = dict(samples_col.find_one( { "name": args_dict["name"], 'build':args_dict['build'] } ))
+        samples_found_exact = dict(samples_col.find_one( { "name": args_dict["name"] } )) #, 'build':args_dict['build'] would make it impossible to update build
     except:
         exit("Cannot find case in database, will not update anything. Bye!")
     if samples_found_exact:
@@ -440,6 +441,25 @@ def data_typer(args_dict):
                 if config.data_types[dtype] != data_type:
                     exit("data types are both from RNA and DNA. Check your input")
     return data_type
+
+def meta_info_updater(meta_dict,sample_id,samples_col):
+    """
+    check for changes, replace if new
+    Add new field that did not exist before
+    """
+    try:
+        result = dict(samples_col.find_one( {"_id": ObjectId(str(sample_id))}))
+    except:
+        exit("Cannot find case in database, will not update anything. Bye! meta info")
+    for arg in meta_dict:
+        if arg in result:
+            if meta_dict[arg] != result[arg]:
+                samples_col.update_one( { "_id": ObjectId(str(sample_id)) }, { '$set': {str(arg): meta_dict[arg] }})
+                logging.debug(f"changing {arg} : from {result[arg]} to {meta_dict[arg]}")
+        else:
+            samples_col.update_one( { "_id": ObjectId(str(sample_id)) }, { '$set': {str(arg): meta_dict[arg] }})
+            logging.debug(f"adding {arg} : {meta_dict[arg]} to sample")
+
 
 def setup_logging(debug : bool = False) -> None:
 
