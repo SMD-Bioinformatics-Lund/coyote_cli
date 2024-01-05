@@ -1,0 +1,11 @@
+{
+  "classifier_results": [
+    {
+      "class": "HeH",
+      "score": 0.5419,
+      "true": 6,
+      "total": 11
+    }
+  ],
+  "classifier_version": "HEM_1.01"
+}

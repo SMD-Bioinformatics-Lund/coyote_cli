@@ -7,7 +7,7 @@ gens_id: 'test'
 subpanel: 'cns'
 purity: 0.8
 build: 38
-vcf: /data/bnf/dev/viktor/cmdvcf/resources/test.vcf
+vcf_files: /data/bnf/dev/viktor/cmdvcf/resources/test.vcf
 transloc: /data/bnf/dev/viktor/cmdvcf/resources/translocations.vcf
 cnv: /data/bnf/dev/viktor/SomaticPanelPipeline/Seracare_funpartofcookingcnvs_panelmatched.json
 biomarkers: /data/bnf/dev/viktor/cmdvcf/resources/example.biomarkers.json

@@ -1,0 +1,51 @@
+[
+   {
+      "calls" : [
+         {
+            "selected" : 1,
+            "longestanchor" : "30",
+            "caller" : "fusioncatcher",
+            "spanpairs" : "16",
+            "breakpoint1" : "2:108719678:+",
+            "breakpoint2" : "6:73520056:-",
+            "spanreads" : "2",
+            "effect" : "CDS(truncated)/UTR",
+            "commonreads" : "0",
+            "desc" : "oncogene,cancer,m11,t2,exon-exon"
+         },
+         {
+            "desc" : "oncogene,cancer,m11,t2",
+            "commonreads" : "0",
+            "effect" : "in-frame",
+            "spanreads" : "2",
+            "breakpoint2" : "6:73519049:-",
+            "spanpairs" : "16",
+            "caller" : "fusioncatcher",
+            "breakpoint1" : "2:108775931:+",
+            "longestanchor" : "29"
+         }
+      ],
+      "gene2" : "EEF1A1",
+      "gene1" : "RANBP2",
+      "genes" : "RANBP2^EEF1A1"
+   },
+   {
+      "gene1" : "RPS11",
+      "genes" : "RPS11^AP000781",
+      "calls" : [
+         {
+            "selected" : 1,
+            "longestanchor" : "41",
+            "breakpoint2" : "11:57389063:-",
+            "breakpoint1" : "19:49499550:+",
+            "caller" : "fusioncatcher",
+            "spanpairs" : "17",
+            "effect" : "out-of-frame",
+            "spanreads" : "2",
+            "commonreads" : "0",
+            "desc" : "ribosomal,m5"
+         }
+      ],
+      "gene2" : "AP000781"
+   }
+]
