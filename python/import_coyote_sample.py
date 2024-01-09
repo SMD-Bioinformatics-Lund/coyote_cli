@@ -12,6 +12,7 @@ import csv
 import gzip
 import re
 from cli import cli_parser
+from datetime import datetime
 from bson.objectid import ObjectId
 
 ## Import Coyote Sample 
@@ -62,6 +63,7 @@ def main(args) -> None:
     else:
         logging.debug(f"Hi! \nLoading sample via {command} argument")
         sample_dict["name"] = what_id(args_dict["name"],args_dict["increment"],samples_col)
+        sample_dict["time_added"] = datetime.utcnow()
         sample_id = samples_col.insert_one(sample_dict)
         sample_id = sample_id.inserted_id
     # Load DNA variation #
@@ -136,6 +138,8 @@ def load_snvs(infile,sample_id,group,update,db):
                     # sometimes gnomAD AF is assigned as 0.01&0 use max AF of these
                     gnomadaf = transcript["gnomAD_AF"].split("&")
                     max_af = max(gnomadaf)
+                    if max_af == "":
+                        max_af = 0.0
                     if float(max_af) > config_filters[key]:
                         fail_filter = 1
             elif key in filters:
@@ -152,15 +156,25 @@ def load_snvs(infile,sample_id,group,update,db):
                 except:
                     continue
             count +=1
+        # edits for coyote
+        var_dict["INFO"]["variant_callers"] = var_dict["INFO"]["variant_callers"].split("|")
+        var_dict["FILTER"] = var_dict["FILTER"].split(";")
+        del var_dict["FORMAT"]
         count = 0
         for sample in var_dict["GT"]:
             if "AF" not in sample and "VAF" not in sample or "DP" not in sample or "VD" not in sample or "GT" not in sample:
                 exit("not a valid VCF, should be aggregated by AF(VAF), VD AD and GT")
-            # first sample is tumor, add this information to db
+            # first sample is tumor, add this information to db, also change VAF to AF as coyote expects
             if not count:
                 var_dict["GT"][count]["type"] = "case"
+                var_dict["GT"][count]["AF"] =  var_dict["GT"][count]["VAF"]
+                del var_dict["GT"][count]["VAF"]
             else:
                 var_dict["GT"][count]["type"] = "control"
+                var_dict["GT"][count]["AF"] =  var_dict["GT"][count]["VAF"]
+                del var_dict["GT"][count]["VAF"]
+            var_dict["GT"][count]["sample"] = var_dict["GT"][count]["_sample_id"]
+            del var_dict["GT"][count]["_sample_id"]
             count += 1
         filtered_data.append(var_dict)
     if update:
@@ -208,7 +222,7 @@ def load_biomarkers(biomarkers_json,sample_id,update,db):
     if update:
         delete_collection("biomarkers",sample_id)
     collection = db["biomarkers"]
-    result = collection.insert_many(biomarkers_dict)
+    result = collection.insert_one(biomarkers_dict)
     logging.debug(f"Inserted {len(biomarkers_dict)-2} other biomarkers")
 
 def load_lowcov(lowcov_bed,sample_id,case_id,update,db):
