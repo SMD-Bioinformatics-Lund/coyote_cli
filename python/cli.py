@@ -128,7 +128,7 @@ def cli_parser():
     )
     sample_meta.add_argument(
         "--build",
-        dest="build",
+        dest="genome_build",
         required=True,
         help="To which genome build is the case aligned to (required)",
     )

@@ -189,7 +189,7 @@ def validate_yaml(yaml_file):
     """
     with open(yaml_file, 'r') as file:
         yaml_dict = yaml.safe_load(file)
-    if ("vcf_files" not in yaml_dict or "fusion_files" not in yaml_dict) or "groups" not in yaml_dict or "name" not in yaml_dict or "build" not in yaml_dict:
+    if ("vcf_files" not in yaml_dict or "fusion_files" not in yaml_dict) or "groups" not in yaml_dict or "name" not in yaml_dict or "genome_build" not in yaml_dict:
         exit("YAML is missing mandatory fields: vcf, groups, name or build")
 
     return yaml_dict
