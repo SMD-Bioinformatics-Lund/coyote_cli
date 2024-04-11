@@ -41,6 +41,8 @@ def main(args) -> None:
         args_dict["groups"] = tmp_list
     elif command == "yaml":
         args_dict = validate_yaml(args.yaml_file)
+        args_dict["update"] = args.update
+        args_dict["increment"] = args.increment
     sample_dict = {}
     # check what's being loaded, DNA or RNA
     data_type = data_typer(args_dict)
@@ -72,6 +74,7 @@ def main(args) -> None:
         if args_dict["vcf_files"] != "no_update":
             logging.debug(f"Loading DNA variation, starting with SNV variants..")
             load_snvs(args_dict["vcf_files"],sample_id,args_dict["groups"],update,db)
+            exit
         # load optional data
         if "cnv" in args_dict:
             logging.debug(f"Reading copy number variation")
@@ -132,12 +135,15 @@ def load_snvs(infile,sample_id,group,update,db):
         fail_filter = 0
         # for DB match to present variants for this case
         var_dict["SAMPLE_ID"] = str(sample_id)
+        # find floats in CSQ, make sure they are saved into coyote as such
+        # also, remove gnomad_AF&gnomad_AF types
+        var_dict = emulate_perl(var_dict)
+        # apply filters according to assay
         for key in config_filters:
             if "gnomAD" in key:
                 for transcript in var_dict["INFO"]["CSQ"]:
                     # sometimes gnomAD AF is assigned as 0.01&0 use max AF of these
-                    gnomadaf = transcript["gnomAD_AF"].split("&")
-                    max_af = max(gnomadaf)
+                    max_af = transcript["gnomAD_AF"]
                     if max_af == "":
                         max_af = 0.0
                     if float(max_af) > config_filters[key]:
@@ -189,7 +195,7 @@ def validate_yaml(yaml_file):
     """
     with open(yaml_file, 'r') as file:
         yaml_dict = yaml.safe_load(file)
-    if ("vcf_files" not in yaml_dict or "fusion_files" not in yaml_dict) or "groups" not in yaml_dict or "name" not in yaml_dict or "genome_build" not in yaml_dict:
+    if ("vcf_files" not in yaml_dict or "fusion_files" not in yaml_dict) and "groups" not in yaml_dict and "name" not in yaml_dict and "genome_build" not in yaml_dict:
         exit("YAML is missing mandatory fields: vcf, groups, name or build")
 
     return yaml_dict
@@ -475,6 +481,29 @@ def meta_info_updater(meta_dict,sample_id,samples_col):
         else:
             samples_col.update_one( { "_id": ObjectId(str(sample_id)) }, { '$set': {str(arg): meta_dict[arg] }})
             logging.debug(f"adding {arg} : {meta_dict[arg]} to sample")
+
+def emulate_perl(var_dict):
+    """
+    Perl is superior when it comes to auto detecting data types, let us emulate that
+    """
+    for transcript in var_dict["INFO"]["CSQ"]:
+        for key in transcript:
+            ## first try an split on &, and then first item for data type
+            if isinstance(transcript[key], str):
+                data = transcript[key].split("&")
+                if is_float(data[0]):
+                    data = [float(x) for x in data]
+                    max_float = max(data)
+                    transcript[key] = float(max_float)      
+    return var_dict
+
+def is_float(s):
+    try:
+        float(s)
+        if len(s.split('.')) > 1:
+            return True
+    except ValueError:
+        return False
 
 def setup_logging(debug : bool = False) -> None:
 
