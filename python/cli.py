@@ -185,6 +185,11 @@ def cli_parser():
         dest="classification_path",
         help="Path to JSON containing gene expression classifications",
     )
+    rna_data.add_argument(
+        "--qc",
+        dest="quality_control",
+        help="Path to JSON qc data metrices for the fusion pipeline",
+    )
     load.add_argument(
         "-u",
         "--update",
@@ -194,12 +199,5 @@ def cli_parser():
         help="Update existing case with new information or add new variation type",
     )
 #GetOptions( \%opt, 'vcf=s', 'id=s', 'clarity-sample-id=s', 'clarity-pool-id=s', 'bam=s', 'group=s', 'cnv=s', 'transloc=s', 'qc=s', 'cnvprofile=s', 'build=s', 'gens=s', 'biomarkers=s', 'subpanel=s', 'purity=s', 'lowcov=s' );
-
-
-
-
-
-
-
 
     return parser

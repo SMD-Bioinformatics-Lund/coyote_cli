@@ -112,6 +112,14 @@ def main(args) -> None:
                     logging.debug(f"Removed {result.modified_count} classifications for sample")
                 samples_col.update_one( {"_id": ObjectId(str(sample_id)) }, {'$set': {'classification': class_data}})
                 logging.debug(f"Reading classifications based upon expression levels")
+        if "quality_control" in args_dict:
+            with open(args_dict["quality_control"],'r') as file:
+                class_data = json.load(file)
+                if update:
+                    result = samples_col.update_one({"_id": ObjectId(str(sample_id))}, {"$unset": {"quality_control": ""}})
+                    logging.debug(f"Removed {result.modified_count} quality_control for sample")
+                samples_col.update_one( {"_id": ObjectId(str(sample_id))}, {"$set": {"quality_control": class_data}})
+                logging.debug(f"Reading quality_control from the rnaseq pipeline")
 
 def load_snvs(infile,sample_id,group,update,db):
     """
