@@ -187,8 +187,8 @@ def cli_parser():
     )
     rna_data.add_argument(
         "--qc",
-        dest="quality_control",
-        help="Path to JSON qc data metrices for the fusion pipeline",
+        dest="qc",
+        help="Path to JSON qc data metrices for the pipeline",
     )
     load.add_argument(
         "-u",
