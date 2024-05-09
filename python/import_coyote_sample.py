@@ -117,7 +117,7 @@ def main(args) -> None:
             with open(args_dict["qc"],'r') as file:
                 val = json.load(file)
                 if update:
-                    result = samples_col.update_one({"_id": ObjectId(str(sample_id))}, {"$unset": {"QC": []}}) 
+                    result = samples_col.update_one({"_id": ObjectId(str(sample_id))}, {"$unset": {"QC": ""}}) 
                     logging.debug(f"Removed {result.modified_count} QC for sample")
                 samples_col.update_one( {"_id": ObjectId(str(sample_id))}, {"$set": {"QC": [val]}})
                 logging.debug(f"Reading QC from the rnaseq pipeline")
