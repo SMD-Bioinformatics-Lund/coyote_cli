@@ -97,6 +97,7 @@ data_types = {
     'expression_path' : "RNA",
     'classification_path' : "RNA",
     'fusion_files' : "RNA",
+    'qc' : "RNA", 
     'biomarkers' : "DNA",
     'vcf_files' : "DNA",
     'lowcov' : "DNA",
