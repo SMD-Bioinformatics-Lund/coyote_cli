@@ -159,7 +159,6 @@ def load_snvs(infile,sample_id,group,update,db):
                         fail_filter = 1
             elif key in filters:
                 fail_filter = 1
-                break
         if fail_filter:
             continue
         # delete unused CSQ-fields using config
