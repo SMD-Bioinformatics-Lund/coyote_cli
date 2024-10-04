@@ -143,7 +143,7 @@ def load_snvs(infile,sample_id,group,update,db):
             if "gnomAD" in key:
                 for transcript in var_dict["INFO"]["CSQ"]:
                     # sometimes gnomAD AF is assigned as 0.01&0 use max AF of these
-                    max_af = transcript["gnomAD_AF"]
+                    max_af = transcript["gnomADg_AF"]
                     if max_af == "":
                         max_af = 0.0
                     if float(max_af) > config_filters[key]:
@@ -152,7 +152,7 @@ def load_snvs(infile,sample_id,group,update,db):
                 fail_filter = 1
                 break
         if fail_filter:
-            break
+            continue
         # delete unused CSQ-fields using config
         count = 0
         for transcript in var_dict["INFO"]["CSQ"]:
@@ -163,6 +163,12 @@ def load_snvs(infile,sample_id,group,update,db):
                     continue
             count +=1
         # edits for coyote
+        # summerize variant for easier indexing and searching between annot-collection and variants_idref
+        prot_list,cdna_list,genes_list,transcripts_list = summerize_snv(var_dict["INFO"]["CSQ"])
+        var_dict["HGVSp"] = prot_list
+        var_dict["HGVSc"] = cdna_list
+        var_dict["genes"] = genes_list
+        var_dict["transcripts"] = transcripts_list
         var_dict["INFO"]["variant_callers"] = var_dict["INFO"]["variant_callers"].split("|")
         var_dict["FILTER"] = var_dict["FILTER"].split(";")
         del var_dict["FORMAT"]
@@ -301,8 +307,11 @@ def load_transloc(infile,sample_id,update,db):
     if update:
         delete_collection("transloc",sample_id)
     collection = db["transloc"]
-    result = collection.insert_many(filtered_data)
-    logging.debug(f"Inserted {len(filtered_data)} DNA fusion variants")
+    if len(filtered_data) > 0:
+        result = collection.insert_many(filtered_data)
+        logging.debug(f"Inserted {len(filtered_data)} DNA fusion variants")
+    else:
+        logging.debug(f"No DNA fusion variants to insert")
 
 def read_mane(txt_gz):
     """
@@ -496,6 +505,40 @@ def emulate_perl(var_dict):
                     max_float = max(data)
                     transcript[key] = float(max_float)      
     return var_dict
+
+def summerize_snv(csq):
+    prot_effect = {}
+    cdna_effect = {}
+    genes       = {}
+    transcripts = {}
+    for trans in csq:
+        transcript = trans['Feature']
+        hgvsp = trans['HGVSp']
+        hgvsc = trans['HGVSc']
+        gene = trans['SYMBOL']
+        hgvsp_items = hgvsp.split(':')
+        hgvsc_items = hgvsc.split(':')
+        if len(hgvsp_items) > 1:
+            hgvsp_notrans = hgvsp_items[1]
+            transcript = hgvsp_items[0]
+        else:
+            hgvsp_notrans = hgvsp
+        if len(hgvsc_items) > 1:
+            hgvsc_notrans = hgvsc_items[1]
+            transcript = hgvsc_items[0]
+        else:
+            hgvsc_notrans = hgvsc
+        transcript = str(transcript).split('.')[0]
+        prot_effect[hgvsp_notrans] = 1
+        cdna_effect[hgvsc_notrans] = 1
+        genes[gene] = 1
+        transcripts[transcript] = 1
+    prot_list = list(prot_effect.keys())
+    cdna_list = list(cdna_effect.keys())
+    genes_list = list(genes.keys())
+    transcripts_list = list(transcripts.keys())
+
+    return prot_list,cdna_list,genes_list,transcripts_list
 
 def is_float(s):
     try:
