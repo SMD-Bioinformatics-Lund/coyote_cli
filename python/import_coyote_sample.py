@@ -229,8 +229,12 @@ def load_cnv_json(cnv_json,sample_id,update,db):
     if update:
         delete_collection("cnvs_wgs",sample_id)
     collection = db["cnvs_wgs"]
-    result = collection.insert_many(cnv_variants)
-    logging.debug(f"Inserted {len(cnv_variants)} copy number variants")
+    if len(cnv_variants) > 0:
+        result = collection.insert_many(cnv_variants)
+        logging.debug(f"Inserted {len(cnv_variants)} copy number variants")       
+    else:
+        logging.debug(f"No CNVs to insert")
+        
 
 def load_biomarkers(biomarkers_json,sample_id,update,db):
     """
