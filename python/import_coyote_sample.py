@@ -140,6 +140,8 @@ def load_snvs(infile,sample_id,group,update,db):
         # find floats in CSQ, make sure they are saved into coyote as such
         var_dict = emulate_perl(var_dict)
         # edits for coyote
+        # pick AF field to present in collection.
+        var_dict.update(pick_af_fields(var_dict))
         # summerize variant for easier indexing and searching between annot-collection and variants_idref
         slim_csq, cosmic_list, dbsnp, pubmed_list, prot_list, cdna_list, genes_list, transcripts_list = parse_transcripts(var_dict["INFO"]["CSQ"])
         var_dict["HGVSp"] = prot_list
