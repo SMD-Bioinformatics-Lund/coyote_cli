@@ -132,51 +132,25 @@ def load_snvs(infile,sample_id,group,update,db):
     vcf_object = VariantFile(infile)
     for var in vcf_object.fetch():       
         var_dict = cmdvcf.parse_variant(var,vcf_object.header)
-        filters = var_dict["FILTER"]
         # fix for pindel variants, add TYPE
         if "SVTYPE" in var_dict["INFO"]:
             var_dict["INFO"]["TYPE"] = var_dict["INFO"]["SVTYPE"]
-        # filter according to config
-        if group[0] in config.assay:
-            config_filters = config.assay[group[0]]["filters"]
-        else:
-            config_filters = config.assay["default"]["filters"]
-        fail_filter = 0
         # for DB match to present variants for this case
         var_dict["SAMPLE_ID"] = str(sample_id)
         # find floats in CSQ, make sure they are saved into coyote as such
-        # also, remove gnomad_AF&gnomad_AF types
         var_dict = emulate_perl(var_dict)
-        # apply filters according to assay
-        for key in config_filters:
-            if "gnomAD" in key:
-                for transcript in var_dict["INFO"]["CSQ"]:
-                    # sometimes gnomAD AF is assigned as 0.01&0 use max AF of these
-                    max_af = transcript["gnomADg_AF"]
-                    if max_af == "":
-                        max_af = 0.0
-                    if float(max_af) > config_filters[key]:
-                        fail_filter = 1
-            elif key in filters:
-                fail_filter = 1
-        if fail_filter:
-            continue
-        # delete unused CSQ-fields using config
-        count = 0
-        for transcript in var_dict["INFO"]["CSQ"]:
-            for field in config.coyote_csq:
-                try:
-                    del var_dict["INFO"]["CSQ"][count][field]
-                except:
-                    continue
-            count +=1
         # edits for coyote
         # summerize variant for easier indexing and searching between annot-collection and variants_idref
-        prot_list,cdna_list,genes_list,transcripts_list = summerize_snv(var_dict["INFO"]["CSQ"])
+        slim_csq, cosmic_list, dbsnp, pubmed_list, prot_list, cdna_list, genes_list, transcripts_list = parse_transcripts(var_dict["INFO"]["CSQ"])
         var_dict["HGVSp"] = prot_list
         var_dict["HGVSc"] = cdna_list
         var_dict["genes"] = genes_list
         var_dict["transcripts"] = transcripts_list
+        var_dict["INFO"]["CSQ"] = slim_csq
+        var_dict["cosmic_ids"] = cosmic_list
+        var_dict["dbsnp_id"] = dbsnp
+        var_dict["pubmed_ids"] = pubmed_list
+        var_dict["simple_id"] = f"{var_dict['CHROM']}_{var_dict['POS']}_{var_dict['REF']}_{var_dict['ALT']}"
         var_dict["INFO"]["variant_callers"] = var_dict["INFO"]["variant_callers"].split("|")
         var_dict["FILTER"] = var_dict["FILTER"].split(";")
         del var_dict["FORMAT"]
@@ -518,39 +492,174 @@ def emulate_perl(var_dict):
                     transcript[key] = float(max_float)      
     return var_dict
 
-def summerize_snv(csq):
-    prot_effect = {}
-    cdna_effect = {}
-    genes       = {}
-    transcripts = {}
-    for trans in csq:
-        transcript = trans['Feature']
-        hgvsp = trans['HGVSp']
-        hgvsc = trans['HGVSc']
-        gene = trans['SYMBOL']
-        hgvsp_items = hgvsp.split(':')
-        hgvsc_items = hgvsc.split(':')
-        if len(hgvsp_items) > 1:
-            hgvsp_notrans = hgvsp_items[1]
-            transcript = hgvsp_items[0]
-        else:
-            hgvsp_notrans = hgvsp
-        if len(hgvsc_items) > 1:
-            hgvsc_notrans = hgvsc_items[1]
-            transcript = hgvsc_items[0]
-        else:
-            hgvsc_notrans = hgvsc
-        transcript = str(transcript).split('.')[0]
-        prot_effect[hgvsp_notrans] = 1
-        cdna_effect[hgvsc_notrans] = 1
-        genes[gene] = 1
-        transcripts[transcript] = 1
-    prot_list = list(prot_effect.keys())
-    cdna_list = list(cdna_effect.keys())
-    genes_list = list(genes.keys())
-    transcripts_list = list(transcripts.keys())
+def pick_af_fields(var):
+    """
+    return an AF field to top-level for variant
 
-    return prot_list,cdna_list,genes_list,transcripts_list
+    Prioritize gnomAD_AF then gnomAD genomes, then exac, then thousand genomes
+    and if possible return max af for gnomad
+    """
+    af_dict           = {}
+    allele            = var["ALT"]
+    exac              = parse_allele_freq( var["INFO"]["CSQ"][0].get("ExAC_MAF"),allele)
+    thousand_g        = parse_allele_freq( var["INFO"]["CSQ"][0].get("GMAF"),allele)
+    gnomad            = var["INFO"]["CSQ"][0].get("gnomAD_AF", 0)
+    gnomad_genome     = var["INFO"]["CSQ"][0].get("gnomADg_AF", 0)
+    gnomad_max        = var["INFO"]["CSQ"][0].get("MAX_AF", 0)
+
+    if gnomad:
+        gnomad = max_gnomad(gnomad)
+        af_dict["gnomad_frequency"] = gnomad
+        if gnomad_max:
+            af_dict["gnomad_max"] = gnomad_max
+    elif gnomad_genome:
+        gnomad = max_gnomad(gnomad)
+        af_dict["gnomad_frequency"] = gnomad_genome
+        if gnomad_max:
+            af_dict["gnomad_max"] = gnomad_max
+    elif exac:
+        af_dict["exac_frequency"] = exac
+    elif thousand_g:
+        af_dict["1000g_frequency"] = thousand_g
+    else:
+        af_dict["gnomad_frequency"] = ""
+        af_dict["gnomad_max"] = ""
+    return af_dict
+
+def max_gnomad(gnomad):
+    """
+    check if gnoamd is multivalued, split and max
+    """
+    try:
+        gnomad_list = gnomad.split('&')
+        if gnomad_list:
+            return float(max(gnomad_list))
+    except:
+        return gnomad
+
+    
+
+def parse_allele_freq(freq_str, allele):
+
+    if freq_str:
+        all_alleles = freq_str.split('&')
+        for allele_frq in all_alleles:
+            a = allele_frq.split(':')
+            if a[0] == allele:
+                return float(a[1])
+
+    return 0
+
+def split_on_comma(data):
+
+    data_parts = data.split(":")
+    if len(data_parts) > 1:
+        return data_parts[1]
+    else:
+        return data
+
+def split_on_ambersand(found_dict,string):
+    """
+    collect pubmed ids
+    """
+    try:
+        string_list = string.split('&')
+        for c in string_list:
+            found_dict[c] = 1
+        return found_dict
+    except:
+        found_dict[str(string)] = 1
+        return found_dict
+
+def collect_dbsnp(dbsnp_dict,dbsnp):
+    """
+    collect all rsids
+    """
+    dbsnp_list = dbsnp.split('&')
+    for snp in dbsnp_list:
+        if snp.startswith("rs"):
+            dbsnp_dict[snp] = 1
+    return dbsnp_dict
+
+def parse_transcripts(csq:dict):
+    """
+    reduce redundancy from CSQ-strings
+    re-organize data into top-level
+    """
+    transcripts    = []
+    pubmed_dict    = {}
+    cosmic_dict    = {}
+    dbsnp_dict     = {}
+    transcript_ids = {}
+    hgvsc_ids      = {}
+    hgvsp_ids      = {}
+    gene_symbols   = {}
+    for transcript in csq:
+        slim_transcript = {}
+        
+        slim_transcript["Feature"]        = transcript.get("Feature")
+        transcript_id                     = str(transcript.get("Feature")).split('.')[0]
+        transcript_ids[transcript_id]     = 1
+        slim_transcript["HGNC_ID"]        = transcript.get("HGNC_ID")
+        gene_symbol                       = transcript.get("SYMBOL")
+        slim_transcript["SYMBOL"]         = gene_symbol
+        gene_symbols[gene_symbol]         = 1
+        slim_transcript["PolyPhen"]       = transcript.get('PolyPhen')
+        slim_transcript["SIFT"]           = transcript.get('SIFT')
+        slim_transcript["Consequence"]    = transcript.get('Consequence')
+        slim_transcript["ENSP"]           = transcript.get('ENSP')
+        slim_transcript["BIOTYPE"]        = transcript.get('BIOTYPE')
+        slim_transcript["INTRON"]         = transcript.get('INTRON')
+        slim_transcript["EXON"]           = transcript.get('EXON')
+        slim_transcript["CANONICAL"]      = transcript.get('CANONICAL')
+        slim_transcript["MANE"]           = transcript.get('MANE_SELECT')
+        slim_transcript["STRAND"]         = transcript.get('STRAND')
+
+        protein_change = transcript.get('HGVSp')
+        if protein_change:
+            protein_change = split_on_comma(protein_change)
+        slim_transcript["HGVSp"]          = protein_change
+        hgvsp_ids[protein_change]         = 1
+        cdna_change = transcript.get('HGVSc')
+        if cdna_change:
+            cdna_change = split_on_comma(cdna_change)
+        slim_transcript["HGVSc"]          = cdna_change
+        hgvsc_ids[cdna_change]         = 1
+        cosmic = transcript.get('COSMIC')
+        if cosmic:
+            cosmic_dict = split_on_ambersand(cosmic_dict,cosmic)
+        
+        dbsnp = transcript.get("Existing_variation")
+        if dbsnp:
+            dbsnp_dict = collect_dbsnp(dbsnp_dict,dbsnp)
+
+        pubmed = transcript.get("PUBMED")
+        if pubmed:
+            pubmed_dict = split_on_ambersand(pubmed_dict,pubmed)
+
+        transcripts.append(slim_transcript)
+
+    cosmic_list = list(cosmic_dict.keys())
+    pubmed_list = list(pubmed_dict.keys())
+    dbsnp = list(dbsnp_dict.keys())
+
+    ## summerized
+    transcript_list = list(transcript_ids.keys())
+    transcript_list_filtered = [item for item in transcript_list if item]
+
+    hgvsc_list = list(hgvsc_ids.keys())
+    hgvsc_list_filtered = [item for item in hgvsc_list if item]
+
+    hgvsp_list = list(hgvsp_ids.keys())
+    hgvsp_list_filtered = [item for item in hgvsp_list if item]
+
+    genes_list = list(gene_symbols.keys())
+    genes_list_filtered = [item for item in genes_list if item]
+    if len(dbsnp) > 0:
+        dbsnp = dbsnp[0]
+    else:
+        dbsnp = ""
+    return transcripts, cosmic_list, dbsnp, pubmed_list, transcript_list_filtered, hgvsc_list_filtered, hgvsp_list_filtered, genes_list_filtered
 
 def is_float(s):
     try:
