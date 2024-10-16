@@ -498,7 +498,7 @@ def pick_af_fields(var):
     """
     return an AF field to top-level for variant
 
-    Prioritize gnomAD_AF then gnomAD genomes, then exac, then thousand genomes
+    Will have gnomAD_AF then gnomAD genomes, then exac, then thousand genomes
     and if possible return max af for gnomad
     """
     af_dict           = {}
@@ -519,13 +519,13 @@ def pick_af_fields(var):
         af_dict["gnomad_frequency"] = gnomad_genome
         if gnomad_max:
             af_dict["gnomad_max"] = gnomad_max
-    elif exac:
-        af_dict["exac_frequency"] = exac
-    elif thousand_g:
-        af_dict["1000g_frequency"] = thousand_g
     else:
         af_dict["gnomad_frequency"] = ""
         af_dict["gnomad_max"] = ""
+    if exac:
+        af_dict["exac_frequency"] = exac
+    if thousand_g:
+        af_dict["1000g_frequency"] = thousand_g
     return af_dict
 
 def max_gnomad(gnomad):
@@ -616,6 +616,8 @@ def parse_transcripts(csq:dict):
         slim_transcript["CANONICAL"]      = transcript.get('CANONICAL')
         slim_transcript["MANE"]           = transcript.get('MANE_SELECT')
         slim_transcript["STRAND"]         = transcript.get('STRAND')
+        slim_transcript["IMPACT"]         = transcript.get('IMPACT')
+
 
         protein_change = transcript.get('HGVSp')
         if protein_change:
