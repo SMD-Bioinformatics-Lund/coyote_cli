@@ -501,7 +501,7 @@ def pick_af_fields(var):
     Will have gnomAD_AF then gnomAD genomes, then exac, then thousand genomes
     and if possible return max af for gnomad
     """
-    af_dict           = {}
+    af_dict           = {"genomad_frequency": "", "genomad_max": "", "exac_frequency": "", "1000g_frequency": ""}
     allele            = var["ALT"]
     exac              = parse_allele_freq( var["INFO"]["CSQ"][0].get("ExAC_MAF"),allele)
     thousand_g        = parse_allele_freq( var["INFO"]["CSQ"][0].get("GMAF"),allele)

@@ -15,7 +15,7 @@ def pick_af_fields(var):
     Will have gnomAD_AF gnomAD genomes, then exac, then thousand genomes
     and if possible return max af for gnomad
     """
-    af_dict           = {}
+    af_dict           = {"genomad_frequency": "", "genomad_max": "", "exac_frequency": "", "1000g_frequency": ""}
     allele            = var["ALT"]
     exac              = parse_allele_freq( var["INFO"]["CSQ"][0].get("ExAC_MAF"),allele)
     thousand_g        = parse_allele_freq( var["INFO"]["CSQ"][0].get("GMAF"),allele)
@@ -33,9 +33,6 @@ def pick_af_fields(var):
         af_dict["gnomad_frequency"] = gnomad_genome
         if gnomad_max:
             af_dict["gnomad_max"] = gnomad_max
-    else:
-        af_dict["gnomad_frequency"] = ""
-        af_dict["gnomad_max"] = ""
     if exac:
         af_dict["exac_frequency"] = exac
     if thousand_g:
@@ -201,4 +198,4 @@ for variant in variants:
         variant["genes"] = genes
         variant["transcripts"] = trans
         variant["simple_id"] = f"{variant['CHROM']}_{variant['POS']}_{variant['REF']}_{variant['ALT']}"
-    #add_to_new_collection(variant)
+    # add_to_new_collection(variant)
