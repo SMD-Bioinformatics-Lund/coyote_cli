@@ -15,7 +15,7 @@ def pick_af_fields(var):
     Will have gnomAD_AF gnomAD genomes, then exac, then thousand genomes
     and if possible return max af for gnomad
     """
-    af_dict           = {"genomad_frequency": "", "genomad_max": "", "exac_frequency": "", "1000g_frequency": ""}
+    af_dict           = {"gnomad_frequency": "", "gnomad_max": "", "exac_frequency": "", "1000g_frequency": ""}
     allele            = var["ALT"]
     exac              = parse_allele_freq( var["INFO"]["CSQ"][0].get("ExAC_MAF"),allele)
     thousand_g        = parse_allele_freq( var["INFO"]["CSQ"][0].get("GMAF"),allele)
@@ -106,14 +106,22 @@ def parse_transcripts(csq:dict):
     hgvsc_ids      = {}
     hgvsp_ids      = {}
     gene_symbols   = {}
+    dhotspot_OIDs   = []
+    gihotspot_OIDs  = []
+    luhotspot_OIDs  = []
+    cnshotspot_OIDs = []
+    mmhotspot_OIDs  = []
+    cohotspot_OIDs  = []
+
+
     for transcript in csq:
         slim_transcript = {}
         
         slim_transcript["Feature"]        = transcript.get("Feature")
-        transcript_id                     = str(transcript.get("Feature")).split('.')[0]
+        transcript_id                = str(transcript.get("Feature")).split('.')[0]
         transcript_ids[transcript_id]     = 1
         slim_transcript["HGNC_ID"]        = transcript.get("HGNC_ID")
-        gene_symbol                       = transcript.get("SYMBOL")
+        gene_symbol                  = transcript.get("SYMBOL")
         slim_transcript["SYMBOL"]         = gene_symbol
         gene_symbols[gene_symbol]         = 1
         slim_transcript["PolyPhen"]       = transcript.get('PolyPhen')
@@ -127,6 +135,8 @@ def parse_transcripts(csq:dict):
         slim_transcript["MANE"]           = transcript.get('MANE_SELECT')
         slim_transcript["STRAND"]         = transcript.get('STRAND')
         slim_transcript["IMPACT"]         = transcript.get("IMPACT")
+        slim_transcript["CADD_PHRED"]     = transcript.get("CADD_PHRED")
+        slim_transcript["CLIN_SIG"]       = transcript.get("CLIN_SIG")
 
         protein_change = transcript.get('HGVSp')
         if protein_change:
@@ -150,11 +160,24 @@ def parse_transcripts(csq:dict):
         if pubmed:
             pubmed_dict = split_on_ambersand(pubmed_dict,pubmed)
 
+        dhotspot_OIDs.append(transcript.get('dhotspot_OID'))
+        gihotspot_OIDs.append(transcript.get('gihotspot_OID'))
+        luhotspot_OIDs.append(transcript.get('luhotspot_OID'))
+        cnshotspot_OIDs.append(transcript.get('cnshotspot_OID'))
+        mmhotspot_OIDs.append(transcript.get('mmhotspot_OID'))
+        cohotspot_OIDs.append(transcript.get('cohotspot_OID'))
+
         transcripts.append(slim_transcript)
 
     cosmic_list = list(cosmic_dict.keys())
     pubmed_list = list(pubmed_dict.keys())
     dbsnp = list(dbsnp_dict.keys())
+    dhotspot_OID_list = list(set(filter(None, dhotspot_OIDs)))
+    gihotspot_OID_list = list(set(filter(None, gihotspot_OIDs)))
+    luhotspot_OID_list = list(set(filter(None, luhotspot_OIDs)))
+    cnshotspot_OID_list = list(set(filter(None, cnshotspot_OIDs)))
+    mmhotspot_OID_list = list(set(filter(None, mmhotspot_OIDs)))
+    cohotspot_OID_list = list(set(filter(None, cohotspot_OIDs)))
 
     ## summerized
     transcript_list = list(transcript_ids.keys())
@@ -172,8 +195,7 @@ def parse_transcripts(csq:dict):
         dbsnp = dbsnp[0]
     else:
         dbsnp = ""
-    return transcripts, cosmic_list, dbsnp, pubmed_list, transcript_list_filtered, hgvsc_list_filtered, hgvsp_list_filtered, genes_list_filtered
-
+    return transcripts, cosmic_list, dbsnp, pubmed_list, transcript_list_filtered, hgvsc_list_filtered, hgvsp_list_filtered, genes_list_filtered, dhotspot_OID_list, gihotspot_OID_list, luhotspot_OID_list, cnshotspot_OID_list, mmhotspot_OID_list, cohotspot_OID_list
 
 def add_to_new_collection(var_object):
     var_col_new.insert_one(var_object)
@@ -188,7 +210,8 @@ for variant in variants:
     if csq:
         #print(f"variant id {variant['_id']}")
         variant.update(pick_af_fields(variant))
-        slim_csq, cosmic_list, dbsnp, pubmed_list, trans, cdna, prot, genes = parse_transcripts(csq)
+        variant["variant_class"] = variant["INFO"]["CSQ"][0].get("VARIANT_CLASS")
+        slim_csq, cosmic_list, dbsnp, pubmed_list, trans, cdna, prot, genes, dhotspot_OIDs, gihotspot_OIDs, luhotspot_OIDs, cnshotspot_OIDs, mmhotspot_OIDs, cohotspot_OIDs = parse_transcripts(csq)
         variant["INFO"]["CSQ"] = slim_csq
         variant["cosmic_ids"] = cosmic_list
         variant["dbsnp_id"] = dbsnp
@@ -197,5 +220,11 @@ for variant in variants:
         variant["HGVSc"] = cdna
         variant["genes"] = genes
         variant["transcripts"] = trans
+        variant["dhotspot_OIDs"] = dhotspot_OIDs
+        variant["gihotspot_OIDs"] = gihotspot_OIDs
+        variant["luhotspot_OIDs"] = luhotspot_OIDs
+        variant["cnshotspot_OIDs"] = cnshotspot_OIDs
+        variant["mmhotspot_OIDs"] = mmhotspot_OIDs
+        variant["cohotspot_OIDs"] = cohotspot_OIDs
         variant["simple_id"] = f"{variant['CHROM']}_{variant['POS']}_{variant['REF']}_{variant['ALT']}"
     # add_to_new_collection(variant)
