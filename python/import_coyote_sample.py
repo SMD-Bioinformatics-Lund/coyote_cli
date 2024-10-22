@@ -144,7 +144,7 @@ def load_snvs(infile,sample_id,group,update,db):
         var_dict.update(pick_af_fields(var_dict))
         var_dict["variant_class"] = var_dict["INFO"]["CSQ"][0].get("VARIANT_CLASS")
         # summerize variant for easier indexing and searching between annot-collection and variants_idref
-        slim_csq, cosmic_list, dbsnp, pubmed_list, transcripts_list, prot_list, cdna_list, genes_list, dhotspot_OIDs, gihotspot_OIDs, luhotspot_OIDs, cnshotspot_OIDs, mmhotspot_OIDs, cohotspot_OIDs = parse_transcripts(var_dict["INFO"]["CSQ"])
+        slim_csq, cosmic_list, dbsnp, pubmed_list, transcripts_list, prot_list, cdna_list, genes_list, hotspots_dict = parse_transcripts(var_dict["INFO"]["CSQ"])
         var_dict["HGVSp"] = prot_list
         var_dict["HGVSc"] = cdna_list
         var_dict["genes"] = genes_list
@@ -153,12 +153,7 @@ def load_snvs(infile,sample_id,group,update,db):
         var_dict["cosmic_ids"] = cosmic_list
         var_dict["dbsnp_id"] = dbsnp
         var_dict["pubmed_ids"] = pubmed_list
-        var_dict["dhotspot_OIDs"] = dhotspot_OIDs
-        var_dict["gihotspot_OIDs"] = gihotspot_OIDs
-        var_dict["luhotspot_OIDs"] = luhotspot_OIDs
-        var_dict["cnshotspot_OIDs"] = cnshotspot_OIDs
-        var_dict["mmhotspot_OIDs"] = mmhotspot_OIDs
-        var_dict["cohotspot_OIDs"] = cohotspot_OIDs
+        var_dict["hotspots"] = [hotspots_dict]
         var_dict["simple_id"] = f"{var_dict['CHROM']}_{var_dict['POS']}_{var_dict['REF']}_{var_dict['ALT']}"
         var_dict["INFO"]["variant_callers"] = var_dict["INFO"]["variant_callers"].split("|")
         var_dict["FILTER"] = var_dict["FILTER"].split(";")
@@ -508,7 +503,7 @@ def pick_af_fields(var):
     Will have gnomAD_AF then gnomAD genomes, then exac, then thousand genomes
     and if possible return max af for gnomad
     """
-    af_dict           = {"gnomad_frequency": "", "gnomad_max": "", "exac_frequency": "", "1000g_frequency": ""}
+    af_dict           = {"gnomad_frequency": "", "gnomad_max": "", "exac_frequency": "", "thousandG_frequency": ""}
     allele            = var["ALT"]
     exac              = parse_allele_freq( var["INFO"]["CSQ"][0].get("ExAC_MAF"),allele)
     thousand_g        = parse_allele_freq( var["INFO"]["CSQ"][0].get("GMAF"),allele)
@@ -532,7 +527,7 @@ def pick_af_fields(var):
     if exac:
         af_dict["exac_frequency"] = exac
     if thousand_g:
-        af_dict["1000g_frequency"] = thousand_g
+        af_dict["thousandG_frequency"] = thousand_g
     return af_dict
 
 def max_gnomad(gnomad):
@@ -590,6 +585,14 @@ def collect_dbsnp(dbsnp_dict,dbsnp):
             dbsnp_dict[snp] = 1
     return dbsnp_dict
 
+def collect_hotspots(hotspot_dict):
+    cleaned_hotspot_dict = {}
+    for hotspot, ids in hotspot_dict.items():
+        formatted_ids = list(set(filter(None, ids)))
+        if formatted_ids:
+            cleaned_hotspot_dict[hotspot] = formatted_ids
+    return cleaned_hotspot_dict
+
 def parse_transcripts(csq:dict):
     """
     reduce redundancy from CSQ-strings
@@ -603,12 +606,7 @@ def parse_transcripts(csq:dict):
     hgvsc_ids      = {}
     hgvsp_ids      = {}
     gene_symbols   = {}
-    dhotspot_OIDs   = []
-    gihotspot_OIDs  = []
-    luhotspot_OIDs  = []
-    cnshotspot_OIDs = []
-    mmhotspot_OIDs  = []
-    cohotspot_OIDs  = []
+    hotspots       = {}
 
     for transcript in csq:
         slim_transcript = {}
@@ -656,25 +654,19 @@ def parse_transcripts(csq:dict):
         if pubmed:
             pubmed_dict = split_on_ambersand(pubmed_dict,pubmed)
 
-        dhotspot_OIDs.append(transcript.get('dhotspot_OID'))
-        gihotspot_OIDs.append(transcript.get('gihotspot_OID'))
-        luhotspot_OIDs.append(transcript.get('luhotspot_OID'))
-        cnshotspot_OIDs.append(transcript.get('cnshotspot_OID'))
-        mmhotspot_OIDs.append(transcript.get('mmhotspot_OID'))
-        cohotspot_OIDs.append(transcript.get('cohotspot_OID'))
+        for transcript_key in transcript.keys():
+            for hsp in ["d", "gi", "lu", "cns", "mm", "co"]:
+                if f"{hsp}hotspot_OID" in transcript_key:
+                    hotspot = transcript.get(transcript_key)
+                    if hotspot:
+                        hotspots.setdefault(hsp, []).append(hotspot)
 
         transcripts.append(slim_transcript)
 
     cosmic_list = list(cosmic_dict.keys())
     pubmed_list = list(pubmed_dict.keys())
     dbsnp = list(dbsnp_dict.keys())
-
-    dhotspot_OID_list = list(set(filter(None, dhotspot_OIDs)))
-    gihotspot_OID_list = list(set(filter(None, gihotspot_OIDs)))
-    luhotspot_OID_list = list(set(filter(None, luhotspot_OIDs)))
-    cnshotspot_OID_list = list(set(filter(None, cnshotspot_OIDs)))
-    mmhotspot_OID_list = list(set(filter(None, mmhotspot_OIDs)))
-    cohotspot_OID_list = list(set(filter(None, cohotspot_OIDs)))
+    hotspot_oids = collect_hotspots(hotspots)
 
     ## summerized
     transcript_list = list(transcript_ids.keys())
@@ -693,7 +685,7 @@ def parse_transcripts(csq:dict):
     else:
         dbsnp = ""
 
-    return transcripts, cosmic_list, dbsnp, pubmed_list, transcript_list_filtered, hgvsc_list_filtered, hgvsp_list_filtered, genes_list_filtered, dhotspot_OID_list, gihotspot_OID_list, luhotspot_OID_list, cnshotspot_OID_list, mmhotspot_OID_list, cohotspot_OID_list
+    return transcripts, cosmic_list, dbsnp, pubmed_list, transcript_list_filtered, hgvsc_list_filtered, hgvsp_list_filtered, genes_list_filtered, hotspot_oids
 
 def is_float(s):
     try:

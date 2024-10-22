@@ -1,7 +1,7 @@
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 client = MongoClient("localhost")
-db = client["coyote_dev"]
+db = client["coyote_dev_3"]
 var_col = db["variants_idref"]
 var_col_new = db["variants"]
 sample_col = db["samples"]
@@ -15,7 +15,7 @@ def pick_af_fields(var):
     Will have gnomAD_AF gnomAD genomes, then exac, then thousand genomes
     and if possible return max af for gnomad
     """
-    af_dict           = {"gnomad_frequency": "", "gnomad_max": "", "exac_frequency": "", "1000g_frequency": ""}
+    af_dict           = {"gnomad_frequency": "", "gnomad_max": "", "exac_frequency": "", "thousandG_frequency": ""}
     allele            = var["ALT"]
     exac              = parse_allele_freq( var["INFO"]["CSQ"][0].get("ExAC_MAF"),allele)
     thousand_g        = parse_allele_freq( var["INFO"]["CSQ"][0].get("GMAF"),allele)
@@ -36,7 +36,7 @@ def pick_af_fields(var):
     if exac:
         af_dict["exac_frequency"] = exac
     if thousand_g:
-        af_dict["1000g_frequency"] = thousand_g
+        af_dict["thousandG_frequency"] = thousand_g
     return af_dict
 
 def max_gnomad(gnomad):
@@ -93,6 +93,16 @@ def collect_dbsnp(dbsnp_dict,dbsnp):
         if snp.startswith("rs"):
             dbsnp_dict[snp] = 1
     return dbsnp_dict
+
+def collect_hotspots(hotspot_dict):
+    cleaned_hotspot_dict = {}
+    for hotspot, ids in hotspot_dict.items():
+        formatted_ids = list(set(filter(None, ids)))
+        if formatted_ids:
+            cleaned_hotspot_dict[hotspot] = formatted_ids
+    return cleaned_hotspot_dict
+
+
 def parse_transcripts(csq:dict):
     """
     reduce redundancy from CSQ-strings
@@ -106,12 +116,7 @@ def parse_transcripts(csq:dict):
     hgvsc_ids      = {}
     hgvsp_ids      = {}
     gene_symbols   = {}
-    dhotspot_OIDs   = []
-    gihotspot_OIDs  = []
-    luhotspot_OIDs  = []
-    cnshotspot_OIDs = []
-    mmhotspot_OIDs  = []
-    cohotspot_OIDs  = []
+    hotspots       = {}
 
 
     for transcript in csq:
@@ -160,24 +165,19 @@ def parse_transcripts(csq:dict):
         if pubmed:
             pubmed_dict = split_on_ambersand(pubmed_dict,pubmed)
 
-        dhotspot_OIDs.append(transcript.get('dhotspot_OID'))
-        gihotspot_OIDs.append(transcript.get('gihotspot_OID'))
-        luhotspot_OIDs.append(transcript.get('luhotspot_OID'))
-        cnshotspot_OIDs.append(transcript.get('cnshotspot_OID'))
-        mmhotspot_OIDs.append(transcript.get('mmhotspot_OID'))
-        cohotspot_OIDs.append(transcript.get('cohotspot_OID'))
+        for transcript_key in transcript.keys():
+            for hsp in ["d", "gi", "lu", "cns", "mm", "co"]:
+                if f"{hsp}hotspot_OID" in transcript_key:
+                    hotspot = transcript.get(transcript_key)
+                    if hotspot:
+                        hotspots.setdefault(hsp, []).append(hotspot)
 
         transcripts.append(slim_transcript)
 
     cosmic_list = list(cosmic_dict.keys())
     pubmed_list = list(pubmed_dict.keys())
     dbsnp = list(dbsnp_dict.keys())
-    dhotspot_OID_list = list(set(filter(None, dhotspot_OIDs)))
-    gihotspot_OID_list = list(set(filter(None, gihotspot_OIDs)))
-    luhotspot_OID_list = list(set(filter(None, luhotspot_OIDs)))
-    cnshotspot_OID_list = list(set(filter(None, cnshotspot_OIDs)))
-    mmhotspot_OID_list = list(set(filter(None, mmhotspot_OIDs)))
-    cohotspot_OID_list = list(set(filter(None, cohotspot_OIDs)))
+    hotspot_oids = collect_hotspots(hotspots)
 
     ## summerized
     transcript_list = list(transcript_ids.keys())
@@ -195,7 +195,7 @@ def parse_transcripts(csq:dict):
         dbsnp = dbsnp[0]
     else:
         dbsnp = ""
-    return transcripts, cosmic_list, dbsnp, pubmed_list, transcript_list_filtered, hgvsc_list_filtered, hgvsp_list_filtered, genes_list_filtered, dhotspot_OID_list, gihotspot_OID_list, luhotspot_OID_list, cnshotspot_OID_list, mmhotspot_OID_list, cohotspot_OID_list
+    return transcripts, cosmic_list, dbsnp, pubmed_list, transcript_list_filtered, hgvsc_list_filtered, hgvsp_list_filtered, genes_list_filtered, hotspot_oids
 
 def add_to_new_collection(var_object):
     var_col_new.insert_one(var_object)
@@ -204,27 +204,30 @@ def add_to_new_collection(var_object):
 #variants = (var_col.find( { "_id" : ObjectId("6706917cfcb65091269167f2") } ))
 #for sample in samples:
     #sample_id = sample['_id']
-variants = (var_col.find( { "SAMPLE_ID" : "67069173fcb6509126916438" } ))
-for variant in variants:
-    csq = variant["INFO"].get("CSQ")
-    if csq:
-        #print(f"variant id {variant['_id']}")
-        variant.update(pick_af_fields(variant))
-        variant["variant_class"] = variant["INFO"]["CSQ"][0].get("VARIANT_CLASS")
-        slim_csq, cosmic_list, dbsnp, pubmed_list, trans, cdna, prot, genes, dhotspot_OIDs, gihotspot_OIDs, luhotspot_OIDs, cnshotspot_OIDs, mmhotspot_OIDs, cohotspot_OIDs = parse_transcripts(csq)
-        variant["INFO"]["CSQ"] = slim_csq
-        variant["cosmic_ids"] = cosmic_list
-        variant["dbsnp_id"] = dbsnp
-        variant["pubmed_ids"] = pubmed_list
-        variant["HGVSp"] = prot
-        variant["HGVSc"] = cdna
-        variant["genes"] = genes
-        variant["transcripts"] = trans
-        variant["dhotspot_OIDs"] = dhotspot_OIDs
-        variant["gihotspot_OIDs"] = gihotspot_OIDs
-        variant["luhotspot_OIDs"] = luhotspot_OIDs
-        variant["cnshotspot_OIDs"] = cnshotspot_OIDs
-        variant["mmhotspot_OIDs"] = mmhotspot_OIDs
-        variant["cohotspot_OIDs"] = cohotspot_OIDs
-        variant["simple_id"] = f"{variant['CHROM']}_{variant['POS']}_{variant['REF']}_{variant['ALT']}"
-    # add_to_new_collection(variant)
+#variants = (var_col.find( { "SAMPLE_ID" : "67069173fcb6509126916438" } ))
+# variants = (var_col.find( { "SAMPLE_ID" : "6618fd85dbdd45ba0b732513" } ))
+# variants = (var_col.find( { "SAMPLE_ID" : "65fbdec69bc47223004e97e1" } )) # solid_integration_test-2
+# variants = (var_col.find( { "SAMPLE_ID" : "659b37c09bc4724425065161" } )) # 23MD14600-wgs
+# variants = (var_col.find( { "SAMPLE_ID" : "66a0a4f09bc472c8ed4acfe1" } )) # 23PL18971-00-01-02-DNA
+
+for sample_id in ["6706917cfcb65091269167f2", "67069173fcb6509126916438", "6618fd85dbdd45ba0b732513", "65fbdec69bc47223004e97e1", "659b37c09bc4724425065161", "66a0a4f09bc472c8ed4acfe1"]:
+    variants = (var_col.find( { "SAMPLE_ID" : sample_id } ))
+
+    for variant in variants:
+        csq = variant["INFO"].get("CSQ")
+        if csq:
+            #print(f"variant id {variant['_id']}")
+            variant.update(pick_af_fields(variant))
+            variant["variant_class"] = variant["INFO"]["CSQ"][0].get("VARIANT_CLASS")
+            slim_csq, cosmic_list, dbsnp, pubmed_list, trans, cdna, prot, genes, hotspots_dict = parse_transcripts(csq)
+            variant["INFO"]["CSQ"] = slim_csq
+            variant["cosmic_ids"] = cosmic_list
+            variant["dbsnp_id"] = dbsnp
+            variant["pubmed_ids"] = pubmed_list
+            variant["HGVSp"] = prot
+            variant["HGVSc"] = cdna
+            variant["genes"] = genes
+            variant["transcripts"] = trans
+            variant["hotspots"] = [hotspots_dict]
+            variant["simple_id"] = f"{variant['CHROM']}_{variant['POS']}_{variant['REF']}_{variant['ALT']}"
+        # add_to_new_collection(variant)
