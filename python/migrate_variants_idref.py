@@ -364,8 +364,8 @@ for sample_id in [
             variant["INFO"]["CSQ"] = selcted_transcript_removal(
                 slim_csq, selected_csq["Feature"]
             )
-            variant["INFO"]["CSQ_selected"] = selected_csq
-            variant["INFO"]["CSQ_source"] = source
+            variant["INFO"]["selected_CSQ"] = selected_csq
+            variant["INFO"]["selected_CSQ_criteria"] = source
             variant["selected_csq_feature"] = selected_csq["Feature"]
             variant["variant_class"] = selected_csq.get("VARIANT_CLASS")
             variant["cosmic_ids"] = cosmic_list
@@ -379,8 +379,8 @@ for sample_id in [
             variant["simple_id"] = (
                 f"{variant['CHROM']}_{variant['POS']}_{variant['REF']}_{variant['ALT']}"
             )
-            # add_to_new_collection(variant)
+            add_to_new_collection(variant)
         else:
             # Adds all the removed variants to a new collection for further inspection
-            # add_to_filtered_collection(variant)
+            add_to_filtered_collection(variant)
             pass
