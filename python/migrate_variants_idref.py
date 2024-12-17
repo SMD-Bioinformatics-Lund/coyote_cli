@@ -330,12 +330,12 @@ for sample_id in [
         # removes the variant all together if the csq only has experimental transcripts but retains if the any of those experimental transcripts are in the list of genes
         valid_var = True
         if csq:
-            all_feautures = [c.get("Feature") for c in csq]
+            all_features = [c.get("Feature") for c in csq]
             all_X_genes = [
                 c.get("SYMBOL") for c in csq if c.get("Feature", "").startswith("X")
             ]
 
-            if all([f.startswith("X") for f in all_feautures]) and not any(
+            if all([f.startswith("X") for f in all_features]) and not any(
                 [
                     g in ["HNF1A", "MZT2A", "SNX9", "KLHDC4", "LMTK3", "PTPA"]
                     for g in list(set(all_X_genes))
@@ -357,7 +357,7 @@ for sample_id in [
                 genes,
                 hotspots_dict,
             ) = parse_transcripts(csq)
-            selected_csq, source = select_csq(
+            selected_csq, selected_csq_source = select_csq(
                 slim_csq, canonical_dict
             )  # How slow is this
 
@@ -365,7 +365,7 @@ for sample_id in [
                 slim_csq, selected_csq["Feature"]
             )
             variant["INFO"]["selected_CSQ"] = selected_csq
-            variant["INFO"]["selected_CSQ_criteria"] = source
+            variant["INFO"]["selected_CSQ_criteria"] = selected_csq_source
             variant["selected_csq_feature"] = selected_csq["Feature"]
             variant["variant_class"] = selected_csq.get("VARIANT_CLASS")
             variant["cosmic_ids"] = cosmic_list
@@ -379,8 +379,8 @@ for sample_id in [
             variant["simple_id"] = (
                 f"{variant['CHROM']}_{variant['POS']}_{variant['REF']}_{variant['ALT']}"
             )
-            add_to_new_collection(variant)
+            # add_to_new_collection(variant)
         else:
             # Adds all the removed variants to a new collection for further inspection
-            add_to_filtered_collection(variant)
+            # add_to_filtered_collection(variant)
             pass
