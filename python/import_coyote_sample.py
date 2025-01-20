@@ -22,7 +22,7 @@ from bson.objectid import ObjectId
 #  Sample information: Via JSON, identifiers such as ID clarity ID, both for case and control
 #  Translocations: Via VCF, SNPeff strings
 #  Check whether sample exist, try to iterate new suffix
-#  Low Cov data: Via Bed file
+#  Low Cov data: Via Bed file / or via JSON cov.
 #  Biomarkers: Via JSON
 #  Fusions: Via JSON
 ##
@@ -100,9 +100,15 @@ def main(args) -> None:
         if "transloc" in args_dict:
             logging.debug(f"Reading DNA translocations")
             load_transloc(args_dict["transloc"], sample_id, update, db)
+        if "lowcov" in args_dict and "cov" in args_dict:
+            logging.debug(f"Both lowcov and cov is being loaded for sample, pick one")
+            exit()
         if "lowcov" in args_dict:
             logging.debug(f"Reading regions with lower than expected coverage")
             load_lowcov(args_dict["lowcov"], sample_id, args_dict["name"], update, db)
+        if "cov" in args_dict:
+            logging.debug(f"Reading coverage data from JSON")
+            load_cov(args_dict["cov"], sample_id, args_dict["name"], update, db)
     # Load RNA variation
     elif "fusion_files" in args_dict:
         # since this is a mandatory value for non-update cases. Need to be handled differently
@@ -407,6 +413,19 @@ def load_lowcov(lowcov_bed, sample_id, case_id, update, db):
         f"Inserted {len(lowcov_data)} regions with lower than expected coverage"
     )
 
+def load_cov(cov_json, sample_id, case_id, update, db):
+    """
+    read coverage JSON-file and load to db with case_id as SAMPLE_ID
+    """
+    with open(cov_json, "r") as file:
+        cov_dict = json.load(file)
+    cov_dict["SAMPLE_ID"] = str(sample_id)
+    cov_dict["sample"] = str(case_id)
+    if update:
+        delete_collection("panel_cov", sample_id)
+    collection = db["panel_cov"]
+    result = collection.insert_one(cov_dict)
+    logging.debug(f"Inserted coverage data")
 
 def load_transloc(infile, sample_id, update, db):
     """
