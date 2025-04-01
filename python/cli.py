@@ -160,6 +160,11 @@ def cli_parser():
         help="Path to annotated BED file with average read depths",
     )
     dna_data.add_argument(
+        "--cov",
+        dest="lowcov",
+        help="Path coverage JSON file with average read depths",
+    )
+    dna_data.add_argument(
         "--biomarkers",
         dest="biomarkers",
         help="Path to biomarkers JSON",
