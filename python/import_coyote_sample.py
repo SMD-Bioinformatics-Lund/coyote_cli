@@ -330,7 +330,7 @@ def load_snvs(infile, sample_id, group, update, db):
             count += 1
         filtered_data.append(var_dict)
     if update:
-        delete_collection("variants_idref", sample_id)
+        delete_collection("variants", sample_id)
     collection = db["variants"]
     result = collection.insert_many(filtered_data)
     logging.debug(f"{len(result.inserted_ids)} SNV/Indel variant imported")
