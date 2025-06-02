@@ -139,14 +139,14 @@ def cli_parser():
         help="If case ID already exists, increment this case by number of matches + 1",
     )
     sample_meta.add_argument(
-        "--tumor_sample",
-        dest="tumor_sample",
-        help="tumor_sample name",
+        "--case_id",
+        dest="case_id",
+        help="Case sample name",
     )
     sample_meta.add_argument(
-        "--normal_sample",
-        dest="normal_sample",
-        help="normal_sample name, if available",
+        "--control_id",
+        dest="control_id",
+        help="control sample name, if available",
     )
     sample_meta.add_argument(
         "--profile",

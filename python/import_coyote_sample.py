@@ -42,14 +42,14 @@ def main(args) -> None:
         tmp_list = []
         tmp_list.append(args_dict["groups"])
         args_dict["groups"] = tmp_list
-        normal_sample = args_dict.get("normal_sample", "null")
-        args_dict["normal_sample"] = normal_sample if normal_sample != "null" else None
+        control_id = args_dict.get("control_id", "null")
+        args_dict["control_id"] = control_id if control_id != "null" else None
     elif command == "yaml":
         args_dict = validate_yaml(args.yaml_file)
-        normal_sample = args_dict.get("normal_sample", "null")
+        control_id = args_dict.get("control_id", "null")
         args_dict["update"] = args.update
         args_dict["increment"] = args.increment
-        args_dict["normal_sample"] = normal_sample if normal_sample != "null" else None
+        args_dict["control_id"] = control_id if control_id != "null" else None
     sample_dict = {}
     # check what's being loaded, DNA or RNA
     data_type = data_typer(args_dict)
