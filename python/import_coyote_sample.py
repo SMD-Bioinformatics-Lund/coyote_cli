@@ -42,10 +42,14 @@ def main(args) -> None:
         tmp_list = []
         tmp_list.append(args_dict["groups"])
         args_dict["groups"] = tmp_list
+        control_id = args_dict.get("control_id", "null")
+        args_dict["control_id"] = control_id if control_id != "null" else None
     elif command == "yaml":
         args_dict = validate_yaml(args.yaml_file)
+        control_id = args_dict.get("control_id", "null")
         args_dict["update"] = args.update
         args_dict["increment"] = args.increment
+        args_dict["control_id"] = control_id if control_id != "null" else None
     sample_dict = {}
     # check what's being loaded, DNA or RNA
     data_type = data_typer(args_dict)
@@ -413,6 +417,7 @@ def load_lowcov(lowcov_bed, sample_id, case_id, update, db):
         f"Inserted {len(lowcov_data)} regions with lower than expected coverage"
     )
 
+
 def load_cov(cov_json, sample_id, case_id, update, db):
     """
     read coverage JSON-file and load to db with case_id as SAMPLE_ID
@@ -426,6 +431,7 @@ def load_cov(cov_json, sample_id, case_id, update, db):
     collection = db["panel_cov"]
     result = collection.insert_one(cov_dict)
     logging.debug(f"Inserted coverage data")
+
 
 def load_transloc(infile, sample_id, update, db):
     """

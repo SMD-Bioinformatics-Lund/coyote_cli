@@ -138,6 +138,32 @@ def cli_parser():
         default=True,
         help="If case ID already exists, increment this case by number of matches + 1",
     )
+    sample_meta.add_argument(
+        "--case_id",
+        dest="case_id",
+        help="Case sample name",
+    )
+    sample_meta.add_argument(
+        "--control_id",
+        dest="control_id",
+        help="control sample name, if available",
+    )
+    sample_meta.add_argument(
+        "--profile",
+        dest="profile",
+        help="environment profile to use, e.g. 'production', 'testing', 'development', 'validation'",
+    )
+    sample_meta.add_argument(
+        "--sample_no",
+        dest="sample_no",
+        type=int,
+        help="Sample number, user to indicated if it is a paired sample or not",
+    )
+    sample_meta.add_argument(
+        "--assay",
+        dest="assay",
+        help="Assay name, e.g. 'solid_GMSv3'",
+    )
     ## Paths to DNA data ##
     dna_data.add_argument(
         "--vcf",
@@ -203,6 +229,6 @@ def cli_parser():
         action="store_true",
         help="Update existing case with new information or add new variation type",
     )
-#GetOptions( \%opt, 'vcf=s', 'id=s', 'clarity-sample-id=s', 'clarity-pool-id=s', 'bam=s', 'group=s', 'cnv=s', 'transloc=s', 'qc=s', 'cnvprofile=s', 'build=s', 'gens=s', 'biomarkers=s', 'subpanel=s', 'purity=s', 'lowcov=s' );
+    # GetOptions( \%opt, 'vcf=s', 'id=s', 'clarity-sample-id=s', 'clarity-pool-id=s', 'bam=s', 'group=s', 'cnv=s', 'transloc=s', 'qc=s', 'cnvprofile=s', 'build=s', 'gens=s', 'biomarkers=s', 'subpanel=s', 'purity=s', 'lowcov=s' );
 
     return parser
