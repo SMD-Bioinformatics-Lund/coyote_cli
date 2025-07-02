@@ -370,8 +370,8 @@ def load_cnv_json(cnv_json, sample_id, update, db):
         cnv_variants.append(cnv_dict[var])
 
     if update:
-        delete_collection("cnvs_wgs", sample_id)
-    collection = db["cnvs_wgs"]
+        delete_collection("cnvs", sample_id)
+    collection = db["cnvs"]
     if len(cnv_variants) > 0:
         result = collection.insert_many(cnv_variants)
         logging.debug(f"Inserted {len(cnv_variants)} copy number variants")

@@ -25,7 +25,7 @@ assay = {
 mane = "/data/bnf/dev/viktor/cmdvcf/resources/MANE.GRCh38.v0.9.summary.txt.gz"
 mongo = {
     "uri": "mtlucmds1.lund.skane.se",
-    "dbname": "coyote_dev_3",
+    "dbname": "coyote3",
 }
 
 data_types = {
