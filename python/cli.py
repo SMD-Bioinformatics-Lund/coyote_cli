@@ -95,20 +95,70 @@ def cli_parser():
         help="Case ID, name of case in coyote. Related flags --increment (required)",
     )
     sample_meta.add_argument(
-        "--group",
-        dest="groups",
-        required=True,
-        help="Group name of case, to which group of coyote does sample belong. Example: myeloid_GMSv1.0 (required)",
+        "--clarity_case_id",
+        dest="clarity_case_id",
+        help="Clarity Case Sample ID, need to make clarity db matches",
     )
     sample_meta.add_argument(
-        "--clarity-sample-id",
-        dest="clarity-sample-id",
-        help="Clarity Sample ID, need to make clarity db matches",
+        "--clarity_case_pool_id",
+        dest="clarity_case_pool_id",
+        help="Of which pool was this case sample part of",
     )
     sample_meta.add_argument(
-        "--clarity-pool-id",
-        dest="clarity-pool-id",
-        help="Of which pool was this sample part of",
+        "--clarity_control_id",
+        dest="clarity_control_id",
+        help="Clarity control Sample ID, need to make clarity db matches",
+    )
+    sample_meta.add_argument(
+        "--clarity_control_pool_id",
+        dest="clarity_control_pool_id",
+        help="Of which pool was this control sample part of",
+    )
+    sample_meta.add_argument(
+        "--case_ffpe",
+        dest="case_ffpe",
+        type=bool,
+        help="FFPE status of the case sample (e.g. true, false)",
+    )
+    sample_meta.add_argument(
+        "--case_sequencing_run",
+        dest="case_sequencing_run",
+        help="Sequencing run identifier for the case sample",
+    )
+    sample_meta.add_argument(
+        "--case_reads",
+        dest="case_reads",
+        type=int,
+        help="Number of reads for the case sample",
+    )
+    sample_meta.add_argument(
+        "--case_purity",
+        dest="case_purity",
+        type=float,
+        help="Purity value for the case sample",
+    )
+    sample_meta.add_argument(
+        "--control_ffpe",
+        dest="control_ffpe",
+        type=bool,
+        help="FFPE status of the control sample (e.g. true, false)",
+    )
+    sample_meta.add_argument(
+        "--control_sequencing_run",
+        dest="control_sequencing_run",
+        help="Sequencing run identifier for the control sample",
+    )
+    sample_meta.add_argument(
+        "--control_reads",
+        dest="control_reads",
+        type=int,
+        help="Number of reads for the control sample",
+    )
+    sample_meta.add_argument(
+        "--control_purity",
+        dest="control_purity",
+        type=float,
+        help="Purity value for the control sample",
     )
     sample_meta.add_argument(
         "--gens",
@@ -160,9 +210,40 @@ def cli_parser():
         help="Sample number, user to indicated if it is a paired sample or not",
     )
     sample_meta.add_argument(
+        "--paired",
+        dest="paired",
+        type=bool,
+        help="is this paired sample? If so, set to true, otherwise false",
+    )
+    sample_meta.add_argument(
         "--assay",
         dest="assay",
         help="Assay name, e.g. 'solid_GMSv3'",
+    )
+    sample_meta.add_argument(
+        "--sequencing_scope",
+        dest="sequencing_scope",
+        help="Scope of sequencing performed for the sample (e.g. 'WGS', 'WTS', 'exome', 'panel')",
+    )
+    sample_meta.add_argument(
+        "--omics_layer",
+        dest="omics_layer",
+        help="Omics layer analyzed (e.g. 'DNA', 'RNA', 'PGx')",
+    )
+    sample_meta.add_argument(
+        "--sequencing_technology",
+        dest="sequencing_technology",
+        help="Sequencing technology used (e.g. 'Illumina', 'Nanopore', 'PacBio')",
+    )
+    sample_meta.add_argument(
+        "--pipeline",
+        dest="pipeline",
+        help="Name of the analysis pipeline used",
+    )
+    sample_meta.add_argument(
+        "--pipeline_version",
+        dest="pipeline_version",
+        help="Version of the analysis pipeline used",
     )
     ## Paths to DNA data ##
     dna_data.add_argument(
