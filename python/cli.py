@@ -245,6 +245,13 @@ def cli_parser():
         dest="pipeline_version",
         help="Version of the analysis pipeline used",
     )
+    sample_meta.add_argument(
+        "--dev",
+        dest="dev",
+        type=bool,
+        default=False,
+        help="Change the database to use the development database instead of the production one",
+    )
     ## Paths to DNA data ##
     dna_data.add_argument(
         "--vcf",

@@ -103,10 +103,10 @@ def main(args) -> None:
     logging.debug(f"Sample meta information {sample_dict}")
     # do a load, get the ID-hash from sample load. Add this as SAMPLE_ID to all other documents per case
     client = pymongo.MongoClient(config.mongo["uri"])
-    if args_dict.get("profile", "production") == "production":
-        db = client[config.mongo["dbname"]]
-    else:
+    if args_dict.get("dev"):
         db = client[config.mongo["dbname_dev"]]
+    else:
+        db = client[config.mongo["dbname"]]
     samples_col = db["samples"]
     canonical_col = db["refseq_canonical"]
     # update case, get sample_id for sample-collection #
