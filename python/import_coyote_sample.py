@@ -37,37 +37,76 @@ def main(args) -> None:
         args_dict = {
             key: value for key, value in args_dict.items() if value is not None
         }
-        # make groups a list. Load sample into more than one page in coyote. Coyote expects a list
-        # although it is hardly ever used, and might cause error downstream with 2 or more groups
-        tmp_list = []
-        tmp_list.append(args_dict["groups"])
-        args_dict["groups"] = tmp_list
-        control_id = args_dict.get("control_id", "null")
-        args_dict["control_id"] = control_id if control_id != "null" else None
     elif command == "yaml":
         args_dict = validate_yaml(args.yaml_file)
-        control_id = args_dict.get("control_id", "null")
         args_dict["update"] = args.update
         args_dict["increment"] = args.increment
-        args_dict["control_id"] = control_id if control_id != "null" else None
+
+    # Updating args to None if not present or have value of null
+    case_control_args = [
+        "case_id",
+        "control_id",
+        "clarity_control_id",
+        "clarity_case_id",
+        "clarity_case_pool_id",
+        "clarity_control_pool_id",
+        "case_ffpe",
+        "control_ffpe",
+        "case_sequencing_run",
+        "control_sequencing_run",
+        "case_reads",
+        "control_reads",
+        "case_purity",
+        "control_purity",
+    ]
+    for key in case_control_args:
+        if key in args_dict and (args_dict[key] is None or args_dict[key] == "null"):
+            args_dict[key] = None
+
+    # Make a case /control sub dict to add to the sample doc
+    case_dict, control_dict = {}, {}
+    for key in case_control_args:
+        if "case" in key:
+            update_key = key.replace("case_", "")
+            case_dict[update_key] = args_dict.get(key, None)
+        elif "control" in key:
+            update_key = key.replace("control_", "")
+            control_dict[update_key] = args_dict.get(key, None)
+
+    # initiate an empty sample dict
     sample_dict = {}
+
     # check what's being loaded, DNA or RNA
     data_type = data_typer(args_dict)
     for key in args_dict:
-        if key in [
-            "load",
-            "command_selection",
-            "debug_logger",
-            "quiet",
-            "increment",
-            "update",
-        ]:
+        if (
+            key
+            in [
+                "load",
+                "command_selection",
+                "debug_logger",
+                "quiet",
+                "increment",
+                "update",
+            ]
+            or (key in case_control_args and key not in ["case_id", "control_id"])
+        ):
             continue
         sample_dict[key] = args_dict[key]
+    
+    sample_dict["case"] = case_dict
+    if args_dict.get("control_id"):
+        # if control_id is not present, do not add control dict
+        # this is to allow loading samples without control
+        sample_dict["control"] = control_dict
+
     logging.debug(f"Sample meta information {sample_dict}")
     # do a load, get the ID-hash from sample load. Add this as SAMPLE_ID to all other documents per case
     client = pymongo.MongoClient(config.mongo["uri"])
-    db = client[config.mongo["dbname"]]
+    if args_dict.get("dev"):
+        db = client[config.mongo["dbname_dev"]]
+    else:
+        db = client[config.mongo["dbname"]]
     samples_col = db["samples"]
     canonical_col = db["refseq_canonical"]
     # update case, get sample_id for sample-collection #
@@ -91,7 +130,7 @@ def main(args) -> None:
         if args_dict["vcf_files"] != "no_update":
             logging.debug(f"Loading DNA variation, starting with SNV variants..")
             load_snvs(
-                args_dict["vcf_files"], sample_id, args_dict["groups"], update, db
+                args_dict["vcf_files"], sample_id, args_dict["assay"], update, db
             )
             exit
         # load optional data
@@ -232,10 +271,10 @@ def get_canonical():
 canonical_dict = get_canonical()
 
 
-def load_snvs(infile, sample_id, group, update, db):
+def load_snvs(infile, sample_id, assay, update, db):
     """
     A function to load variants into variants_idref. Only load usable information from CSQ!
-    Path to VCF, will load cmdvcf module using pysam. In config per group(assay) define filters
+    Path to VCF, will load cmdvcf module using pysam. In config per assay define filters
     and what CSQ-fields to load.
     """
     filtered_data = []
@@ -682,8 +721,8 @@ def meta_info_updater(meta_dict, sample_id, samples_col):
     for arg in meta_dict:
         if arg in result:
             if meta_dict[arg] != result[arg]:
-                if arg == "group":
-                    exit("No support to update group as of yet")
+                if arg == "assay":
+                    exit("No support to update assay as of yet")
                 samples_col.update_one(
                     {"_id": ObjectId(str(sample_id))},
                     {"$set": {str(arg): meta_dict[arg]}},

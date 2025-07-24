@@ -14,11 +14,11 @@ assay = {
     "default": {
         "filters": {"gnomAD_AF": 0.05, "FAIL_PON": 1, "FAIL_NVAF": 1, "FAIL_LONGDEL": 1}
     },
-    'GMSHem': {
-        'filters': {'gnomAD_AF': 0.05,'FAIL_PON': 1,'FAIL_NVAF': 1,'FAIL_LONGDEL': 1}
+    "GMSHem": {
+        "filters": {"gnomAD_AF": 0.05, "FAIL_PON": 1, "FAIL_NVAF": 1, "FAIL_LONGDEL": 1}
     },
-    'default': {
-        'filters': {'gnomAD_AF': 0.05,'FAIL_PON': 1,'FAIL_NVAF': 1,'FAIL_LONGDEL': 1}
+    "default": {
+        "filters": {"gnomAD_AF": 0.05, "FAIL_PON": 1, "FAIL_NVAF": 1, "FAIL_LONGDEL": 1}
     },
 }
 
@@ -26,6 +26,7 @@ mane = "/data/bnf/dev/viktor/cmdvcf/resources/MANE.GRCh38.v0.9.summary.txt.gz"
 mongo = {
     "uri": "mtlucmds1.lund.skane.se",
     "dbname": "coyote3",
+    "dbname_dev": "coyote_dev_3",
 }
 
 data_types = {
