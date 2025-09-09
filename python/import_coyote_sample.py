@@ -45,11 +45,37 @@ def setup_logging(debug: bool = False) -> None:
 # --------------------------
 @dataclass
 class Repos:
+    """
+    A class to manage interactions with a MongoDB database.
+    Attributes:
+        client (pymongo.MongoClient): The MongoDB client instance.
+        db (pymongo.database.Database): The MongoDB database instance.
+    """
+
     client: pymongo.MongoClient
     db: pymongo.database.Database
 
     @classmethod
     def from_args(cls, args_dict: Dict[str, Any]) -> "Repos":
+        """
+        Creates an instance of the Repos class using the provided arguments.
+
+        Args:
+            args_dict (Dict[str, Any]): A dictionary containing arguments.
+            The key "dev" determines whether to use the development database
+            or the production database.
+
+        Returns:
+            Repos: An instance of the Repos class initialized with a MongoDB client
+            and the appropriate database.
+
+        Notes:
+            - The MongoDB client is created using the URI specified in the
+            configuration (config.mongo["uri"]).
+            - The database name is determined based on the "dev" key in args_dict:
+            - If "dev" is True, the development database name (config.mongo["dbname_dev"]) is used.
+            - Otherwise, the production database name (config.mongo["dbname"]) is used.
+        """
         client = pymongo.MongoClient(config.mongo["uri"])
         dbname = (
             config.mongo["dbname_dev"]
@@ -795,7 +821,7 @@ def pick_af_fields(var: dict) -> Dict[str, Any]:
     exac: float | Literal[0] = parse_allele_freq(
         var["INFO"]["CSQ"][0].get("ExAC_MAF"), allele
     )
-    thousand_g: Any = var["INFO"]["CSQ"][0].get("GMAF", allele)
+    thousand_g: Any = parse_allele_freq(var["INFO"]["CSQ"][0].get("GMAF"), allele)
     gnomad: Any = var["INFO"]["CSQ"][0].get("gnomAD_AF", 0)
     gnomad_genome: Any = var["INFO"]["CSQ"][0].get("gnomADg_AF", 0)
     gnomad_max: Any = var["INFO"]["CSQ"][0].get("MAX_AF", 0)
