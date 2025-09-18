@@ -137,14 +137,15 @@ def normalize_case_control(
             - `ctrl`: A dictionary with normalized "control" data.
     """
     for k in CASE_CONTROL_KEYS:
-        if k in args and (args[k] is None or args[k] == "null"):
-            args[k] = None
+        if k in args:
+            if args[k] is None or args[k] == "null":
+                args[k] = None
     case: dict = {}
     ctrl: dict = {}
     for k in CASE_CONTROL_KEYS:
-        if k.startswith("case_"):
+        if "case" in k:
             case[k.replace("case_", "")] = args.get(k)
-        elif k.startswith("control_"):
+        elif "control" in k:
             ctrl[k.replace("control_", "")] = args.get(k)
     return case, ctrl
 
