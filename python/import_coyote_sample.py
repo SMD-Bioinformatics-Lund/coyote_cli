@@ -481,51 +481,126 @@ def load_transloc(infile, sample_id, update, db):
     mane = read_mane(config.mane)
     filtered_data = []
     vcf_object = VariantFile(infile)
+    fusion_buffer = {}
+
     for var in vcf_object.fetch():
+        if var.filter.keys() != ['PASS']:
+            continue
+
+        svtype = var.info.get("SVTYPE", "None")
+        if svtype not in {"BND", "DUP"}:
+            continue
+
         var_dict = cmdvcf.parse_variant(var, vcf_object.header)
-        # ignore dups and dels (must be a better way legacy from bjhall)
-        if "<" not in var_dict["ALT"]:
-            var_dict["SAMPLE_ID"] = str(sample_id)
-            keep_variant = 0
-            mane_select = {}
-            all_new_ann = []
-            add_mane = 0
-            for ann in var_dict["INFO"]["ANN"]:
-                ## count mane matches for both genes in pair
+        var_dict["SAMPLE_ID"] = str(sample_id)
+
+        keep_variant = 0
+        mane_select = {}
+        all_new_ann = []
+        add_mane = 0
+
+        for ann in var_dict["INFO"]["ANN"]:
+            if any(anno in ["gene_fusion", "bidirectional_gene_fusion", "feature_fusion"] for anno in ann.get("Annotation", [])):
+
+                if ann.get("Annotation") == ['feature_fusion']:
+                    if ann.get("Feature_Type") == "CUSTOM&sorted":
+                 
+                        feature_genes, feature_id = ann["Feature_ID"].split("_", 1)
+                        var_id = var.id
+                        mate_id = var.info.get("MATEID")
+                        hgvs = ann.get("HGVS.c")
+                        if isinstance(mate_id, (tuple, list)):
+                            mate_id = mate_id[0] 
+
+                        fusion_buffer[var_id] = {
+                            "gene": feature_genes.strip("&"),
+                            "id": feature_id.strip("&"),
+                            "ann": ann,
+                            "hgvs": hgvs,
+                            "mate": mate_id
+                        }
+            
+
+                        if mate_id in fusion_buffer:
+                            print(fusion_buffer)
+                            f1 = fusion_buffer[mate_id]
+                            f2 = {
+                                "gene": feature_genes.strip("&"),
+                                "id": feature_id.strip("&"),
+                                "ann": ann,
+                                "hgvs": hgvs,
+                            }
+
+                            halves = sorted([f1, f2], key=lambda x: x["gene"].upper())
+
+                            g1, g2 = halves[0]["gene"], halves[1]["gene"]
+                            id1, id2 = halves[0]["id"], halves[1]["id"]
+                            hgvs1,hgvs2 = halves[0]["hgvs"], halves[1]["hgvs"]
+
+                        
+                            combined_ann = {
+                                "Allele": var.alleles[0],
+                                "Annotation": ["feature_fusion"],
+                                "Annotation_Impact": "LOW",
+                                "Gene_Name": f"{g1}&{g2}",
+                                "Gene_ID": f"{id1}&{id2}",
+                                "Feature_Type": "CUSTOM&sorted",
+                                "Feature_ID": f"{g1}_{id1}&{g2}_{id2}",
+                                "Transcript_BioType": "",
+                                "Rank": "",
+                                "HGVS.c": f"{hgvs1};{hgvs2}",   # optional symbolic fusion notation
+                                "HGVS.p": "",
+                                "cDNA.pos / cDNA.length": "",
+                                "CDS.pos / CDS.length": "",
+                                "AA.pos / AA.length": "",
+                                "Distance": "",
+                                "ERRORS / WARNINGS / INFO": "",
+                            }
+
+                            print(combined_ann)
+                            ann = combined_ann
+                            del fusion_buffer[mate_id]
+                            del fusion_buffer[var_id]
+                        else:
+                            continue
+                    else:
+                        continue
+
+                else:
+                    genes = ann["Gene_ID"].split("&")
+                    print(ann.get("Annotation"), ann.get("Feature_Type"), ann.get("Gene_Name"), genes)
+
+                keep_variant = 1
                 n_mane = 0
-                genes = ann["Gene_ID"].split("&")
+
+                if len(genes) > 2:
+                    continue
+
                 for gene in genes:
+                    print(gene)
                     enst = mane.get(gene, {}).get("ensembl", "NO_MANE_TRANSCRIPT")
-                    if enst in ann["HGVS.p"]:
+                    print(enst)
+                    if enst in ann.get("HGVS.p", ""):
                         n_mane += 1
-                new_ann = {}
-                ## keep bidirectional and fusion annotations
-                for key in ann:
-                    if key == "Annotation":
-                        for anno in ann["Annotation"]:
-                            if (
-                                anno == "gene_fusion"
-                                or anno == "bidirectional_gene_fusion"
-                            ):
-                                keep_variant = 1
-                    ## a lot of dot notation in SNPeff, remove from final import to DB
-                    dotless_key = key.replace(".", "")
-                    new_ann[dotless_key] = ann[key]
+
+                new_ann = {key.replace(".", ""): ann[key] for key in ann}
                 all_new_ann.append(new_ann)
-                # if both genes in pair are mane save for MANE_ANN annotation
+
                 if n_mane > 0 and n_mane == len(genes):
                     mane_select = new_ann
                     add_mane = 1
+
         del var_dict["INFO"]["ANN"]
         var_dict["INFO"]["ANN"] = all_new_ann
         if add_mane:
             var_dict["INFO"]["MANE_ANN"] = mane_select
         if keep_variant:
             filtered_data.append(var_dict)
+
     if update:
         delete_collection("transloc", sample_id)
     collection = db["transloc"]
-    if len(filtered_data) > 0:
+    if filtered_data:
         result = collection.insert_many(filtered_data)
         logging.debug(f"Inserted {len(filtered_data)} DNA fusion variants")
     else:
