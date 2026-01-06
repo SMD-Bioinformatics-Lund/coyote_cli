@@ -1305,7 +1305,7 @@ class RnaParser:
         if "qc" in args:
             _require_exists("QC JSON", args["qc"])
             with open(args["qc"], "r") as f:
-                preload["qc"] = json.load(f)
+                preload["rna_qc"] = json.load(f)
 
         return preload
 
@@ -1332,6 +1332,9 @@ class DependentWriter:
             "lowcov": "coverage",
             "cov": "panel_cov",
             "fusions": "fusions",
+            "rna_expr": "rna_expression",
+            "rna_class": "rna_classification",
+            "rna_qc": "rna_qc",
         }
 
     def write(
@@ -1384,7 +1387,7 @@ class DependentWriter:
             wipe(col)
 
             # dict-shaped payloads
-            if key in ("biomarkers", "cov"):
+            if key in ("biomarkers", "cov", "rna_expr", "rna_class", "rna_qc"):
                 if not isinstance(payload, dict):
                     raise TypeError(
                         f"{key} expected dict, got {type(payload).__name__}"
@@ -1393,6 +1396,7 @@ class DependentWriter:
                 if key == "cov":
                     payload["sample"] = sample_name
                 self.repos.col(col).insert_one(payload)
+                logging.info(f"Inserted {key} data for sample {sample_name} ({sid})")
                 continue
 
             # list/tuple-shaped payloads
@@ -1408,20 +1412,31 @@ class DependentWriter:
                 rec["SAMPLE_ID"] = sid
             if payload:
                 self.repos.col(col).insert_many(payload)
+                logging.info(
+                    f"Inserted {len(payload)} {key} records for sample {sample_name} ({sid})"
+                )
 
         # Embedded blobs on the sample doc
-        if "rna_expr" in preload:
-            self.repos.samples.update_one(
-                {"_id": sample_id}, {"$set": {"expr": preload["rna_expr"]}}
-            )
-        if "rna_class" in preload:
-            self.repos.samples.update_one(
-                {"_id": sample_id}, {"$set": {"classification": preload["rna_class"]}}
-            )
-        if "qc" in preload:
-            self.repos.samples.update_one(
-                {"_id": sample_id}, {"$set": {"QC": [preload["qc"]]}}
-            )
+
+        # if "rna_expr" in preload:
+        #     self.repos.samples.update_one(
+        #         {"_id": sid}, {"$set": {"expr": preload["rna_expr"]}}
+        #     )
+        #     logging.info(
+        #         f"Inserted RNA expression data for sample {sample_name} ({sid})"
+        #     )
+        # if "rna_class" in preload:
+        #     self.repos.samples.update_one(
+        #         {"_id": sid}, {"$set": {"classification": preload["rna_class"]}}
+        #     )
+        #     logging.info(
+        #         f"Inserted RNA classification data for sample {sample_name} ({sid})"
+        #     )
+        # if "rna_qc" in preload:
+        #     self.repos.samples.update_one(
+        #         {"_id": sid}, {"$set": {"QC": [preload["rna_qc"]]}}
+        #     )
+        #     logging.info(f"Inserted QC data for sample {sample_name} ({sid})")
 
 
 # --------------------------
@@ -1469,6 +1484,9 @@ def cleanup_on_error(repos: Repos, sample_id: ObjectId) -> Generator[None, Any, 
             "coverage",
             "panel_cov",
             "fusions",
+            "rna_expression",
+            "rna_classification",
+            "rna_qc",
         ):
             try:
                 repos.col(col).delete_many({"SAMPLE_ID": sid})
