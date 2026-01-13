@@ -82,6 +82,7 @@ class Repos:
             if args_dict.get("dev")
             else config.mongo["dbname"]
         )
+        logging.info(f"Using database: {dbname}")
         return cls(client=client, db=client[dbname])
 
     @property
