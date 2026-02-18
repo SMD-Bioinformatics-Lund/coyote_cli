@@ -488,7 +488,7 @@ def load_transloc(infile, sample_id, update, db):
             continue
 
         svtype = var.info.get("SVTYPE", "None")
-        if svtype not in {"BND", "DUP"}:
+        if svtype not in {"BND", "DUP", "DEL"}:
             continue
 
         var_dict = cmdvcf.parse_variant(var, vcf_object.header)
@@ -500,33 +500,38 @@ def load_transloc(infile, sample_id, update, db):
         add_mane = 0
 
         for ann in var_dict["INFO"]["ANN"]:
-            if any(anno in ["gene_fusion", "bidirectional_gene_fusion", "feature_fusion"] for anno in ann.get("Annotation", [])):
+            if any(anno in ["gene_fusion", "bidirectional_gene_fusion", "frameshift_variant","feature_fusion"] for anno in ann.get("Annotation", [])):
 
                 if ann.get("Annotation") == ['feature_fusion']:
                     if ann.get("Feature_Type") == "CUSTOM&sorted":
-                 
+                        
+
                         feature_genes, feature_id = ann["Feature_ID"].split("_", 1)
+
+                        print (feature_genes, feature_id)
                         var_id = var.id
                         mate_id = var.info.get("MATEID")
                         hgvs = ann.get("HGVS.c")
+
                         if isinstance(mate_id, (tuple, list)):
                             mate_id = mate_id[0] 
 
                         fusion_buffer[var_id] = {
-                            "gene": feature_genes.strip("&"),
-                            "id": feature_id.strip("&"),
+                            "gene": feature_genes,
+                            "id": feature_id,
                             "ann": ann,
                             "hgvs": hgvs,
                             "mate": mate_id
                         }
-            
 
+                        print (mate_id)
+            
                         if mate_id in fusion_buffer:
                             print(fusion_buffer)
                             f1 = fusion_buffer[mate_id]
                             f2 = {
-                                "gene": feature_genes.strip("&"),
-                                "id": feature_id.strip("&"),
+                                "gene": feature_genes,
+                                "id": feature_id,
                                 "ann": ann,
                                 "hgvs": hgvs,
                             }
@@ -557,8 +562,11 @@ def load_transloc(infile, sample_id, update, db):
                                 "ERRORS / WARNINGS / INFO": "",
                             }
 
-                            print(combined_ann)
+                            #print(combined_ann)
                             ann = combined_ann
+                            genes = ann["Gene_ID"].split("&")
+                            #print(ann.get("Annotation"), ann.get("Feature_Type"), ann.get("Gene_Name"), genes)
+
                             del fusion_buffer[mate_id]
                             del fusion_buffer[var_id]
                         else:
@@ -577,19 +585,18 @@ def load_transloc(infile, sample_id, update, db):
                     continue
 
                 for gene in genes:
-                    print(gene)
                     enst = mane.get(gene, {}).get("ensembl", "NO_MANE_TRANSCRIPT")
-                    print(enst)
                     if enst in ann.get("HGVS.p", ""):
                         n_mane += 1
 
                 new_ann = {key.replace(".", ""): ann[key] for key in ann}
                 all_new_ann.append(new_ann)
 
-                if n_mane > 0 and n_mane == len(genes):
+                if n_mane > 0 and n_mane == len(genes) and isinstance(mane_select, dict) and not mane_select:
                     mane_select = new_ann
                     add_mane = 1
-
+                    
+        print (mane_select)
         del var_dict["INFO"]["ANN"]
         var_dict["INFO"]["ANN"] = all_new_ann
         if add_mane:
