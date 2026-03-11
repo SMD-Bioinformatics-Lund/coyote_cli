@@ -115,7 +115,7 @@ CASE_CONTROL_KEYS: list[str] = [
 
 
 def normalize_case_control(
-    args: Dict[str, Any]
+    args: Dict[str, Any],
 ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     """
     Extracts and normalizes case and control sub-dictionaries from a flat dictionary of arguments.
@@ -1111,6 +1111,14 @@ class DnaParser:
                 "variant_callers"
             ].split("|")
             var_dict["FILTER"] = var_dict["FILTER"].split(";")
+
+            # Keep parity with the legacy Perl importer:
+            # skip variants that failed NVAF/LONGDEL or failed any PON filter.
+            filters = set(var_dict["FILTER"])
+            if "FAIL_NVAF" in filters or "FAIL_LONGDEL" in filters:
+                continue
+            if any(f.startswith("FAIL_PON_") for f in filters):
+                continue
             del var_dict["FORMAT"]
             count = 0
             for sample in var_dict["GT"]:
