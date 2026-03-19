@@ -1221,80 +1221,45 @@ class DnaParser:
                 continue
             
             for ann in var_dict["INFO"]["ANN"]:
-                if any(anno in ["gene_fusion", "bidirectional_gene_fusion", "frameshift_variant","feature_fusion"] for anno in ann.get("Annotation", [])):
+                if ann.get("Transcript_BioType") == "pseudogene":
+                    continue
 
-                    if ann.get("Annotation") == ['feature_fusion']:
+                if any(anno in ["gene_fusion", "bidirectional_gene_fusion", "frameshift_variant","feature_fusion", "transcript_ablation"] for anno in ann.get("Annotation", [])):
+
+                    if ann.get("Annotation") == ['feature_fusion']: 
                         if ann.get("Feature_Type") == "CUSTOM&sorted":
-                            feature_genes, feature_id = ann["Feature_ID"].split("_", 1)
-                            #print (feature_genes, feature_id)                
-                            var_id = var.id
-                            mate_id = var.info.get("MATEID")
-                            hgvs = ann.get("HGVS.c")
+                            combined = self._process_feature_fusion(var, ann, fusion_buffer)
 
-                            if isinstance(mate_id, (tuple, list)):
-                                mate_id = mate_id[0] 
-
-                            fusion_buffer[var_id] = {
-                                "gene": feature_genes,
-                                "id": feature_id,
-                                "ann": ann,
-                                "hgvs": hgvs,
-                                "mate": mate_id
-                                }
-
-                            #print (mate_id)
-
-                            if mate_id in fusion_buffer:
-                                #print(fusion_buffer)
-                                f1 = fusion_buffer[mate_id]
-                                f2 = {
-                                    "gene": feature_genes,
-                                    "id": feature_id,
-                                    "ann": ann,
-                                    "hgvs": hgvs,
-                                }
-
-                                halves = sorted([f1, f2], key=lambda x: x["gene"].upper())
-
-                                g1, g2 = halves[0]["gene"], halves[1]["gene"]
-                                id1, id2 = halves[0]["id"], halves[1]["id"]
-                                hgvs1,hgvs2 = halves[0]["hgvs"], halves[1]["hgvs"]
-
-                        
-                                combined_ann = {
-                                    "Allele": var.alleles[0],
-                                    "Annotation": ["feature_fusion"],
-                                    "Annotation_Impact": "LOW",
-                                    "Gene_Name": f"{g1}&{g2}",
-                                    "Gene_ID": f"{id1}&{id2}",
-                                    "Feature_Type": "CUSTOM&sorted",
-                                    "Feature_ID": f"{g1}_{id1}&{g2}_{id2}",
-                                    "Transcript_BioType": "",
-                                    "Rank": "",
-                                    "HGVS.c": f"{hgvs1};{hgvs2}",   # optional symbolic fusion notation
-                                    "HGVS.p": "",
-                                    "cDNA.pos / cDNA.length": "",
-                                    "CDS.pos / CDS.length": "",
-                                    "AA.pos / AA.length": "",
-                                    "Distance": "",
-                                    "ERRORS / WARNINGS / INFO": "",
-                                }
-
-                                #print(combined_ann)
-                                ann = combined_ann
+                            if combined:
+                                ann = combined  # Replace current ann with the merged version
                                 genes = ann["Gene_ID"].split("&")
-                                #print(ann.get("Annotation"), ann.get("Feature_Type"), ann.get("Gene_Name"), genes)
-
-                                del fusion_buffer[mate_id]
-                                del fusion_buffer[var_id]
                             else:
-                                continue
+                                continue # Skip this record until the mate is found
+                            
+                            print(combined)
+                            ann = combined
+                            genes = ann["Gene_ID"].split("&")
+                            print(ann.get("Annotation"), ann.get("Feature_Type"), ann.get("Gene_Name"), genes)
+
                         else:
                             continue
 
+                    # elif ann.get("Annotation") == ['transcript_ablation']:
+                    #     combined = self._process_feature_fusion(var, ann, fusion_buffer)
+                        
+                    #     if combined:
+                    #         ann = combined  # Replace current ann with the merged version
+                    #         genes = ann["Gene_ID"].split("&")
+                    #     else:
+                    #         continue # Skip this record until the mate is found
+                        
+                    #     print(combined)
+                    #     ann = combined
+                    #     genes = ann["Gene_ID"].split("&")
+                    #     print(ann.get("Annotation"), ann.get("Feature_Type"), ann.get("Gene_Name"), genes)
+                               
                     else:
                         genes = ann["Gene_ID"].split("&")
-                        #print(ann.get("Annotation"), ann.get("Feature_Type"), ann.get("Gene_Name"), genes)
 
                     keep_variant = 1
                     n_mane = 0
@@ -1324,6 +1289,69 @@ class DnaParser:
                 filtered_data.append(var_dict)
                 
         return filtered_data
+
+    def _process_feature_fusion(self, var, ann: dict, fusion_buffer: dict) -> Optional[dict]:
+        """
+        Processes feature fusions by buffering breakend (BND) partners. 
+        Returns a combined annotation dictionary only when both mates are processed.
+        """
+        # 1. Extract IDs and clean Mate ID
+        var_id = var.id
+        mate_id = var.info.get("MATEID")
+        if isinstance(mate_id, (list, tuple)):
+            mate_id = mate_id[0]
+
+        # 2. Parse the Feature ID (e.g., "GENE_ID")
+        try:
+            feature_genes, feature_id = ann["Feature_ID"].split("_", 1)
+        except ValueError:
+            # Handle cases where Feature_ID might not follow the expected "GENE_ID" format
+            return None
+
+        # 3. Store the current record in the buffer
+        current_half = {
+            "gene": feature_genes,
+            "id": feature_id,
+            "ann": ann,
+            "hgvs": ann.get("HGVS.c", ""),
+            "mate": mate_id
+        }
+        fusion_buffer[var_id] = current_half
+
+        # 4. Check if the partner is already in the buffer
+        if mate_id in fusion_buffer:
+            f1 = fusion_buffer.pop(mate_id)
+            f2 = fusion_buffer.pop(var_id)
+
+            # Sort alphabetically by gene name to ensure GeneA-GeneB is consistent
+            halves = sorted([f1, f2], key=lambda x: x["gene"].upper())
+            g1, g2 = halves[0]["gene"], halves[1]["gene"]
+            id1, id2 = halves[0]["id"], halves[1]["id"]
+            hgvs1, hgvs2 = halves[0]["hgvs"], halves[1]["hgvs"]
+
+            # 5. Construct the combined annotation
+            combined_ann = {
+                "Allele": var.alleles[0],
+                "Annotation": ["feature_fusion"],
+                "Annotation_Impact": "LOW",
+                "Gene_Name": f"{g1}&{g2}",
+                "Gene_ID": f"{id1}&{id2}",
+                "Feature_Type": "CUSTOM&sorted",
+                "Feature_ID": f"{g1}_{id1}&{g2}_{id2}",
+                "Transcript_BioType": "",
+                "Rank": "",
+                "HGVS.c": f"{hgvs1};{hgvs2}",
+                "HGVS.p": "",
+                "cDNA.pos / cDNA.length": "",
+                "CDS.pos / CDS.length": "",
+                "AA.pos / AA.length": "",
+                "Distance": "",
+                "ERRORS / WARNINGS / INFO": "",
+            }
+            return combined_ann
+
+        # Return None if we are still waiting for the mate record
+        return None
 
 
 @dataclass
