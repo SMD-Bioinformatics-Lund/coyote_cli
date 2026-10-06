@@ -81,6 +81,14 @@ def cli_parser():
         action="store_true",
         help="Update existing case with new information or add new variation type",
     )
+    yaml.add_argument(
+        "-d",
+        "--dev",
+        dest="dev",
+        default=False,
+        action="store_true",
+        help="Enable development mode for additional logging and debugging. Also, to change the db to a developement database instead of the production one",
+    )
     """
     LOAD Custom args
     """
