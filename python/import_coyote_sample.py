@@ -1178,121 +1178,211 @@ class DnaParser:
                 lowcov_data.append(row)
         return lowcov_data
 
+
+
     def _parse_transloc_only(self, infile: str) -> list:
         """
-        Parses DNA translocations from a VCF (Variant Call Format) file, filtering and processing
-        translocation annotations such as gene fusions and bidirectional fusions. Additionally,
-        integrates MANE (Matched Annotation from NCBI and EMBL-EBI) annotations where applicable.
+        Parse translocations (BND) and fusion-relevant DEL/DUP SVs from a VCF.
 
-        Args:
-            infile (str): Path to the input VCF file containing variant data.
-
-        Returns:
-            list: A list of dictionaries representing filtered and processed variant data. Each
-            dictionary contains variant information, including annotations and MANE data if available.
-
-        Functionality:
-            - Reads MANE annotations from a configuration file.
-            - Filters out variants with "<" in their ALT field (e.g., deletions and duplications).
-            - Processes variant annotations to identify gene fusions and bidirectional fusions.
-            - Matches MANE annotations for both genes in a pair and adds them to the variant data.
-            - Removes dot notation from SNPeff annotations for database compatibility.
-            - Constructs a new annotation structure for each variant and appends it to the output
-            if it meets the filtering criteria.
+        - BND: keeps gene_fusion, bidirectional_gene_fusion, frameshift_variant,
+        feature_fusion (mate-merged) and transcript_ablation.
+        - DEL/DUP: keeps gene_fusion, bidirectional_gene_fusion,
+        frameshift_variant and feature_fusion (single record, no mate merge).
+        - Only PASS variants; pseudogene transcripts skipped.
+        - Adds MANE_ANN when all genes in the pair match a MANE transcript.
+        - Strips '.' from annotation keys for MongoDB compatibility.
         """
         mane: Dict[str, Dict[str, str]] = read_mane(config.mane)
         filtered_data: list = []
         vcf_object = VariantFile(infile)
         fusion_buffer: Dict[str, Any] = {}
 
-        for var in vcf_object.fetch():
-            var_dict: dict[str, Any] = cmdvcf.parse_variant(var, vcf_object.header)
+        # Annotations of interest per SV type
+        BND_ANNOTATIONS = {
+        "gene_fusion", "bidirectional_gene_fusion", "frameshift_variant",
+        "feature_fusion", "transcript_ablation",
+        }
+        DELDUP_ANNOTATIONS = {
+            "gene_fusion", "bidirectional_gene_fusion", "frameshift_variant",
+            "feature_fusion",
+        }
+        ALLOWED_BY_SVTYPE = {
+            "BND": BND_ANNOTATIONS,
+            "DEL": DELDUP_ANNOTATIONS,
+            "DUP": DELDUP_ANNOTATIONS,
+        }
 
-            keep_variant = 0
-            mane_select = {}
-            all_new_ann = []
-            add_mane = 0
+        for var in vcf_object.fetch():
             svtype = var.info.get("SVTYPE", "None")
-            
-            if svtype not in {"BND", "DUP", "DEL"}:
+            allowed = ALLOWED_BY_SVTYPE.get(svtype)
+            if allowed is None:
                 continue
-            
-            if var.filter.keys() != ['PASS']:
+            if list(var.filter.keys()) != ["PASS"]:
                 continue
-            
+
+            var_dict: Dict[str, Any] = cmdvcf.parse_variant(var, vcf_object.header)
+            mane_select: Dict[str, Any] = {}
+            all_new_ann: list = []
+
             for ann in var_dict["INFO"]["ANN"]:
                 if ann.get("Transcript_BioType") == "pseudogene":
                     continue
 
-                if any(anno in ["gene_fusion", "bidirectional_gene_fusion", "frameshift_variant","feature_fusion", "transcript_ablation"] for anno in ann.get("Annotation", [])):
+                annotations = set(ann.get("Annotation", []))
+                if not annotations & allowed:
+                    continue
 
-                    if ann.get("Annotation") == ['feature_fusion']: 
-                        if ann.get("Feature_Type") == "CUSTOM&sorted":
-                            combined = self._process_feature_fusion(var, ann, fusion_buffer)
-
-                            if combined:
-                                ann = combined  # Replace current ann with the merged version
-                                genes = ann["Gene_ID"].split("&")
-                            else:
-                                continue # Skip this record until the mate is found
-                            
-                            print(combined)
-                            ann = combined
-                            genes = ann["Gene_ID"].split("&")
-                            print(ann.get("Annotation"), ann.get("Feature_Type"), ann.get("Gene_Name"), genes)
-
-                        else:
-                            continue
-
-                    # elif ann.get("Annotation") == ['transcript_ablation']:
-                    #     combined = self._process_feature_fusion(var, ann, fusion_buffer)
-                        
-                    #     if combined:
-                    #         ann = combined  # Replace current ann with the merged version
-                    #         genes = ann["Gene_ID"].split("&")
-                    #     else:
-                    #         continue # Skip this record until the mate is found
-                        
-                    #     print(combined)
-                    #     ann = combined
-                    #     genes = ann["Gene_ID"].split("&")
-                    #     print(ann.get("Annotation"), ann.get("Feature_Type"), ann.get("Gene_Name"), genes)
-                               
-                    else:
-                        genes = ann["Gene_ID"].split("&")
-
-                    keep_variant = 1
-                    n_mane = 0
-
-                    if len(genes) > 2:
+                # feature_fusion handling
+                if annotations == {"feature_fusion"}:
+                    if ann.get("Feature_Type") != "CUSTOM&sorted":
                         continue
+                    if svtype == "BND":
+                        combined = self._process_feature_fusion(var, ann, fusion_buffer)
+                        if not combined:
+                            continue  # wait for the mate record
+                        ann = combined
+                    # DEL/DUP: single record, use ann as-is
 
-                    for gene in genes:
-                        enst = mane.get(gene, {}).get("ensembl", "NO_MANE_TRANSCRIPT")
-                        if enst in ann.get("HGVS.p", ""):
-                            n_mane += 1
+                genes = ann["Gene_ID"].split("&")
+                if len(genes) > 2:
+                    continue
 
-                    new_ann = {key.replace(".", ""): ann[key] for key in ann}
-                    all_new_ann.append(new_ann)
-                
-                    if n_mane > 0 and n_mane == len(genes) and isinstance(mane_select, dict) and not mane_select:
-                        mane_select = new_ann
-                        add_mane = 1
-                    
-            #print (mane_select)
-            del var_dict["INFO"]["ANN"]
+                n_mane = sum(
+                    1 for gene in genes
+                    if mane.get(gene, {}).get("ensembl", "NO_MANE_TRANSCRIPT") in ann.get("HGVS.p", "")
+                )
+
+                new_ann = {key.replace(".", ""): value for key, value in ann.items()}
+                all_new_ann.append(new_ann)
+
+                if not mane_select and n_mane == len(genes):
+                    mane_select = new_ann
+
+            if not all_new_ann:
+                continue
+
             var_dict["INFO"]["ANN"] = all_new_ann
-            
-            if add_mane:
+            if mane_select:
                 var_dict["INFO"]["MANE_ANN"] = mane_select
-            if keep_variant:
-                filtered_data.append(var_dict)
-                
+            filtered_data.append(var_dict)
+
         return filtered_data
+
+    # def _parse_transloc_only(self, infile: str) -> list:
+    #     """
+    #     Parses DNA translocations from a VCF (Variant Call Format) file, filtering and processing
+    #     translocation annotations such as gene fusions and bidirectional fusions. Additionally,
+    #     integrates MANE (Matched Annotation from NCBI and EMBL-EBI) annotations where applicable.
+
+    #     Args:
+    #         infile (str): Path to the input VCF file containing variant data.
+
+    #     Returns:
+    #         list: A list of dictionaries representing filtered and processed variant data. Each
+    #         dictionary contains variant information, including annotations and MANE data if available.
+
+    #     Functionality:
+    #         - Reads MANE annotations from a configuration file.
+    #         - Filters out variants with "<" in their ALT field (e.g., deletions and duplications).
+    #         - Processes variant annotations to identify gene fusions and bidirectional fusions.
+    #         - Matches MANE annotations for both genes in a pair and adds them to the variant data.
+    #         - Removes dot notation from SNPeff annotations for database compatibility.
+    #         - Constructs a new annotation structure for each variant and appends it to the output
+    #         if it meets the filtering criteria.
+    #     """
+    #     mane: Dict[str, Dict[str, str]] = read_mane(config.mane)
+    #     filtered_data: list = []
+    #     vcf_object = VariantFile(infile)
+    #     fusion_buffer: Dict[str, Any] = {}
+
+    #     for var in vcf_object.fetch():
+    #         var_dict: dict[str, Any] = cmdvcf.parse_variant(var, vcf_object.header)
+
+    #         keep_variant = 0
+    #         mane_select = {}
+    #         all_new_ann = []
+    #         add_mane = 0
+    #         svtype = var.info.get("SVTYPE", "None")
+
+    #         if svtype not in {"BND", "DUP", "DEL"}:
+    #             continue
+
+    #         if var.filter.keys() != ['PASS']:
+    #             continue
+
+    #         for ann in var_dict["INFO"]["ANN"]:
+    #             if ann.get("Transcript_BioType") == "pseudogene":
+    #                 continue
+
+    #             if any(anno in ["gene_fusion", "bidirectional_gene_fusion", "frameshift_variant","feature_fusion", "transcript_ablation"] for anno in ann.get("Annotation", [])):
+
+    #                 if ann.get("Annotation") == ['feature_fusion']:
+    #                     if ann.get("Feature_Type") == "CUSTOM&sorted":
+    #                         combined = self._process_feature_fusion(var, ann, fusion_buffer)
+
+    #                         if combined:
+    #                             ann = combined  # Replace current ann with the merged version
+    #                             genes = ann["Gene_ID"].split("&")
+    #                         else:
+    #                             continue # Skip this record until the mate is found
+
+    #                         print(combined)
+    #                         ann = combined
+    #                         genes = ann["Gene_ID"].split("&")
+    #                         print(ann.get("Annotation"), ann.get("Feature_Type"), ann.get("Gene_Name"), genes)
+
+    #                     else:
+    #                         continue
+
+    #                 # elif ann.get("Annotation") == ['transcript_ablation']:
+    #                 #     combined = self._process_feature_fusion(var, ann, fusion_buffer)
+
+    #                 #     if combined:
+    #                 #         ann = combined  # Replace current ann with the merged version
+    #                 #         genes = ann["Gene_ID"].split("&")
+    #                 #     else:
+    #                 #         continue # Skip this record until the mate is found
+
+    #                 #     print(combined)
+    #                 #     ann = combined
+    #                 #     genes = ann["Gene_ID"].split("&")
+    #                 #     print(ann.get("Annotation"), ann.get("Feature_Type"), ann.get("Gene_Name"), genes)
+
+    #                 else:
+    #                     genes = ann["Gene_ID"].split("&")
+
+    #                 keep_variant = 1
+    #                 n_mane = 0
+
+    #                 if len(genes) > 2:
+    #                     continue
+
+    #                 for gene in genes:
+    #                     enst = mane.get(gene, {}).get("ensembl", "NO_MANE_TRANSCRIPT")
+    #                     if enst in ann.get("HGVS.p", ""):
+    #                         n_mane += 1
+
+    #                 new_ann = {key.replace(".", ""): ann[key] for key in ann}
+    #                 all_new_ann.append(new_ann)
+
+    #                 if n_mane > 0 and n_mane == len(genes) and isinstance(mane_select, dict) and not mane_select:
+    #                     mane_select = new_ann
+    #                     add_mane = 1
+
+    #         #print (mane_select)
+    #         del var_dict["INFO"]["ANN"]
+    #         var_dict["INFO"]["ANN"] = all_new_ann
+
+    #         if add_mane:
+    #             var_dict["INFO"]["MANE_ANN"] = mane_select
+    #         if keep_variant:
+    #             filtered_data.append(var_dict)
+
+    #     return filtered_data
 
     def _process_feature_fusion(self, var, ann: dict, fusion_buffer: dict) -> Optional[dict]:
         """
-        Processes feature fusions by buffering breakend (BND) partners. 
+        Processes feature fusions by buffering breakend (BND) partners.
         Returns a combined annotation dictionary only when both mates are processed.
         """
         # 1. Extract IDs and clean Mate ID
