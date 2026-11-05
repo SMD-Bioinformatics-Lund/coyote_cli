@@ -1178,8 +1178,6 @@ class DnaParser:
                 lowcov_data.append(row)
         return lowcov_data
 
-
-
     def _parse_transloc_only(self, infile: str) -> list:
         """
         Parse translocations (BND) and fusion-relevant DEL/DUP SVs from a VCF.
