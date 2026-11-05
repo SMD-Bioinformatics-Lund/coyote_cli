@@ -93,7 +93,7 @@ def main(args) -> None:
         ):
             continue
         sample_dict[key] = args_dict[key]
-    
+
     sample_dict["case"] = case_dict
     if args_dict.get("control_id"):
         # if control_id is not present, do not add control dict
