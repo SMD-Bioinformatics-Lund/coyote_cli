@@ -2,7 +2,7 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [SemVer](https://semver.org/).
 
-## 2.1.0 (unreleased)
+## 2.1.0
 
 ### Added
 
