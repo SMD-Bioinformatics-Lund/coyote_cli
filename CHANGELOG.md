@@ -2,6 +2,12 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [SemVer](https://semver.org/).
 
+## 2.1.0 (unreleased)
+
+### Added
+
+- Store optional BAM and BAI paths from YAML in case and control metadata. Omitted paths default to `null`.
+
 ## [2.0.0] - 2026-11-05
 
 ### Breaking

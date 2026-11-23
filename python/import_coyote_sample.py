@@ -111,6 +111,10 @@ CASE_CONTROL_KEYS: list[str] = [
     "control_reads",
     "case_purity",
     "control_purity",
+    "case_bam",
+    "control_bam",
+    "case_bai",
+    "control_bai",
 ]
 
 
